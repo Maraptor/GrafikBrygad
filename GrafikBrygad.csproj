@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
+    <ApplicationIcon>Images\GrafikBrygad.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,9 +14,15 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Include="Images\GrafikBrygad.ico" />
     <Content Include="Images\veolia.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Installer\" />
+    <Folder Include="publish\win-x64\" />
   </ItemGroup>
 
 </Project>

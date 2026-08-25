@@ -17,10 +17,15 @@ namespace GrafikBrygad
             "Grafik Brygad VEOLIA Energia Łódź";
 
         private const string WersjaProgramu =
-            "wersja 1.18";
+            "wersja 1.19";
 
         private const string AutorProgramu =
             "Marek Walaszczyk";
+
+        // Liczba wierszy widocznych jednocześnie w tabeli.
+        // Przy 11 dniach bieżąca data może znajdować się
+        // dokładnie w środkowym, szóstym wierszu.
+        private const int LiczbaWidocznychDni = 11;
 
 
         // =====================================================
@@ -70,10 +75,16 @@ namespace GrafikBrygad
         private Label lblWersja =
             new Label();
 
+        private Button btnRokWstecz =
+            new Button();
+
         private Button btnPoprzedni =
             new Button();
 
         private Button btnNastepny =
+            new Button();
+
+        private Button btnRokPrzod =
             new Button();
 
         private Button btnAktualny =
@@ -126,13 +137,20 @@ namespace GrafikBrygad
         {
             InitializeComponent();
 
+            // Interfejs został zaprojektowany dla 96 DPI (100%).
+            // Windows Forms przeskaluje go automatycznie przy
+            // 125%, 150% i innych ustawieniach DPI.
+            this.AutoScaleMode =
+                AutoScaleMode.Dpi;
+
+            this.AutoScaleDimensions =
+                new SizeF(96F, 96F);
+
             this.Text =
                 $"{NazwaProgramu} ({WersjaProgramu})";
 
-            // Nieco większy obszar roboczy daje więcej oddechu
-            // nagłówkowi, tabeli, legendzie i podpisowi autora.
             this.ClientSize =
-                new Size(1180, 906);
+                new Size(1020, 916);
 
             this.MinimumSize =
                 this.Size;
@@ -181,6 +199,59 @@ namespace GrafikBrygad
 
 
             // -------------------------------------------------
+            // NAZWA MIESIĄCA
+            // -------------------------------------------------
+
+            lblMiesiac.Location =
+                new Point(200, 118);
+
+            lblMiesiac.Width = 620;
+            lblMiesiac.Height = 58;
+
+            lblMiesiac.TextAlign =
+                ContentAlignment.MiddleCenter;
+
+            lblMiesiac.Font =
+                new Font(
+                    "Segoe UI",
+                    20,
+                    FontStyle.Bold);
+
+            lblMiesiac.ForeColor =
+                Color.FromArgb(
+                    32,
+                    39,
+                    48);
+
+
+            // -------------------------------------------------
+            // ROK -1
+            // -------------------------------------------------
+
+            btnRokWstecz.Text =
+                "ROK -1";
+
+            btnRokWstecz.Location =
+                new Point(70, 184);
+
+            btnRokWstecz.Width = 120;
+            btnRokWstecz.Height = 44;
+
+            btnRokWstecz.Font =
+                new Font(
+                    "Segoe UI",
+                    10.5f,
+                    FontStyle.Bold);
+
+            StylizujPrzycisk(
+                btnRokWstecz,
+                false);
+
+            btnRokWstecz.Click +=
+                BtnRokWstecz_Click;
+
+
+            // -------------------------------------------------
             // POPRZEDNI MIESIĄC
             // -------------------------------------------------
 
@@ -188,15 +259,15 @@ namespace GrafikBrygad
                 "POPRZEDNI MIESIĄC";
 
             btnPoprzedni.Location =
-                new Point(24, 126);
+                new Point(210, 184);
 
-            btnPoprzedni.Width = 220;
-            btnPoprzedni.Height = 42;
+            btnPoprzedni.Width = 200;
+            btnPoprzedni.Height = 44;
 
             btnPoprzedni.Font =
                 new Font(
                     "Segoe UI",
-                    9.5f,
+                    10.5f,
                     FontStyle.Bold);
 
             StylizujPrzycisk(
@@ -208,59 +279,6 @@ namespace GrafikBrygad
 
 
             // -------------------------------------------------
-            // NAZWA MIESIĄCA
-            // -------------------------------------------------
-
-            lblMiesiac.Location =
-                new Point(280, 118);
-
-            lblMiesiac.Width = 620;
-            lblMiesiac.Height = 58;
-
-            lblMiesiac.TextAlign =
-                ContentAlignment.MiddleCenter;
-
-            lblMiesiac.Font =
-                new Font(
-                    "Segoe UI",
-                    18,
-                    FontStyle.Bold);
-
-            lblMiesiac.ForeColor =
-                Color.FromArgb(
-                    32,
-                    39,
-                    48);
-
-
-            // -------------------------------------------------
-            // NASTĘPNY MIESIĄC
-            // -------------------------------------------------
-
-            btnNastepny.Text =
-                "NASTĘPNY MIESIĄC";
-
-            btnNastepny.Location =
-                new Point(936, 126);
-
-            btnNastepny.Width = 220;
-            btnNastepny.Height = 42;
-
-            btnNastepny.Font =
-                new Font(
-                    "Segoe UI",
-                    9.5f,
-                    FontStyle.Bold);
-
-            StylizujPrzycisk(
-                btnNastepny,
-                false);
-
-            btnNastepny.Click +=
-                BtnNastepny_Click;
-
-
-            // -------------------------------------------------
             // AKTUALNY DZIEŃ
             // -------------------------------------------------
 
@@ -268,15 +286,15 @@ namespace GrafikBrygad
                 "AKTUALNY";
 
             btnAktualny.Location =
-                new Point(302, 184);
+                new Point(430, 184);
 
-            btnAktualny.Width = 180;
-            btnAktualny.Height = 42;
+            btnAktualny.Width = 160;
+            btnAktualny.Height = 44;
 
             btnAktualny.Font =
                 new Font(
                     "Segoe UI",
-                    9.5f,
+                    10.5f,
                     FontStyle.Bold);
 
             StylizujPrzycisk(
@@ -288,22 +306,76 @@ namespace GrafikBrygad
 
 
             // -------------------------------------------------
-            // PODGLĄD WYDRUKU
+            // NASTĘPNY MIESIĄC
+            // -------------------------------------------------
+
+            btnNastepny.Text =
+                "NASTĘPNY MIESIĄC";
+
+            btnNastepny.Location =
+                new Point(610, 184);
+
+            btnNastepny.Width = 200;
+            btnNastepny.Height = 44;
+
+            btnNastepny.Font =
+                new Font(
+                    "Segoe UI",
+                    10.5f,
+                    FontStyle.Bold);
+
+            StylizujPrzycisk(
+                btnNastepny,
+                false);
+
+            btnNastepny.Click +=
+                BtnNastepny_Click;
+
+
+            // -------------------------------------------------
+            // ROK +1
+            // -------------------------------------------------
+
+            btnRokPrzod.Text =
+                "ROK +1";
+
+            btnRokPrzod.Location =
+                new Point(830, 184);
+
+            btnRokPrzod.Width = 120;
+            btnRokPrzod.Height = 44;
+
+            btnRokPrzod.Font =
+                new Font(
+                    "Segoe UI",
+                    10.5f,
+                    FontStyle.Bold);
+
+            StylizujPrzycisk(
+                btnRokPrzod,
+                false);
+
+            btnRokPrzod.Click +=
+                BtnRokPrzod_Click;
+
+
+            // -------------------------------------------------
+            // PODGLĄD WYDRUKU - POD TABELĄ
             // -------------------------------------------------
 
             btnPodglad.Text =
                 "PODGLĄD WYDRUKU";
 
             btnPodglad.Location =
-                new Point(500, 184);
+                new Point(313, 748);
 
-            btnPodglad.Width = 180;
+            btnPodglad.Width = 190;
             btnPodglad.Height = 42;
 
             btnPodglad.Font =
                 new Font(
                     "Segoe UI",
-                    9.5f,
+                    10,
                     FontStyle.Bold);
 
             StylizujPrzycisk(
@@ -315,22 +387,22 @@ namespace GrafikBrygad
 
 
             // -------------------------------------------------
-            // DRUKUJ A4
+            // DRUKUJ A4 - POD TABELĄ
             // -------------------------------------------------
 
             btnDrukuj.Text =
                 "DRUKUJ A4";
 
             btnDrukuj.Location =
-                new Point(698, 184);
+                new Point(517, 748);
 
-            btnDrukuj.Width = 180;
+            btnDrukuj.Width = 190;
             btnDrukuj.Height = 42;
 
             btnDrukuj.Font =
                 new Font(
                     "Segoe UI",
-                    9.5f,
+                    10,
                     FontStyle.Bold);
 
             StylizujPrzycisk(
@@ -346,10 +418,12 @@ namespace GrafikBrygad
             // -------------------------------------------------
 
             tabela.Location =
-                new Point(24, 242);
+                new Point(24, 244);
 
-            tabela.Width = 1132;
-            tabela.Height = 520;
+            tabela.Width = 972;
+
+            // Nagłówek + dokładnie 11 pełnych wierszy danych.
+            tabela.Height = 489;
 
             tabela.AllowUserToAddRows =
                 false;
@@ -397,7 +471,7 @@ namespace GrafikBrygad
                 false;
 
             tabela.ColumnHeadersHeight =
-                42;
+                46;
 
             tabela.ColumnHeadersHeightSizeMode =
                 DataGridViewColumnHeadersHeightSizeMode.DisableResizing;
@@ -420,7 +494,7 @@ namespace GrafikBrygad
             tabela.ColumnHeadersDefaultCellStyle.Font =
                 new Font(
                     "Segoe UI",
-                    10,
+                    12,
                     FontStyle.Bold);
 
             tabela.ColumnHeadersDefaultCellStyle.SelectionBackColor =
@@ -432,7 +506,7 @@ namespace GrafikBrygad
             tabela.DefaultCellStyle.Font =
                 new Font(
                     "Segoe UI",
-                    10);
+                    13.5f);
 
             tabela.DefaultCellStyle.ForeColor =
                 Color.FromArgb(
@@ -447,7 +521,7 @@ namespace GrafikBrygad
                     36);
 
             tabela.RowTemplate.Height =
-                29;
+                40;
 
             tabela.ScrollBars =
                 ScrollBars.Vertical;
@@ -482,9 +556,9 @@ namespace GrafikBrygad
                 AutorProgramu;
 
             lblAutor.Location =
-                new Point(24, 852);
+                new Point(24, 868);
 
-            lblAutor.Width = 1132;
+            lblAutor.Width = 972;
             lblAutor.Height = 32;
 
             lblAutor.TextAlign =
@@ -493,7 +567,7 @@ namespace GrafikBrygad
             lblAutor.Font =
                 new Font(
                     "Segoe UI",
-                    9.5f,
+                    10.5f,
                     FontStyle.Italic);
 
             lblAutor.ForeColor =
@@ -525,6 +599,9 @@ namespace GrafikBrygad
                 panelNaglowek);
 
             this.Controls.Add(
+                btnRokWstecz);
+
+            this.Controls.Add(
                 btnPoprzedni);
 
             this.Controls.Add(
@@ -532,6 +609,9 @@ namespace GrafikBrygad
 
             this.Controls.Add(
                 btnNastepny);
+
+            this.Controls.Add(
+                btnRokPrzod);
 
             this.Controls.Add(
                 btnAktualny);
@@ -640,7 +720,7 @@ namespace GrafikBrygad
                 new Point(24, 16);
 
             panelNaglowek.Width =
-                1132;
+                972;
 
             panelNaglowek.Height =
                 94;
@@ -657,13 +737,13 @@ namespace GrafikBrygad
             // -------------------------------------------------
 
             logoVeolia.Location =
-                new Point(22, 12);
+                new Point(22, 8);
 
             logoVeolia.Width =
-                190;
+                205;
 
             logoVeolia.Height =
-                64;
+                76;
 
             logoVeolia.SizeMode =
                 PictureBoxSizeMode.Zoom;
@@ -713,13 +793,13 @@ namespace GrafikBrygad
                 "Grafik Brygad VEOLIA Energia Łódź";
 
             lblTytul.Location =
-                new Point(225, 10);
+                new Point(220, 8);
 
             lblTytul.Width =
-                720;
+                570;
 
             lblTytul.Height =
-                68;
+                76;
 
             lblTytul.TextAlign =
                 ContentAlignment.MiddleCenter;
@@ -727,7 +807,7 @@ namespace GrafikBrygad
             lblTytul.Font =
                 new Font(
                     "Segoe UI",
-                    15,
+                    20.5f,
                     FontStyle.Bold);
 
             lblTytul.UseCompatibleTextRendering =
@@ -756,10 +836,10 @@ namespace GrafikBrygad
                 ")";
 
             lblWersja.Location =
-                new Point(950, 31);
+                new Point(792, 31);
 
             lblWersja.Width =
-                155;
+                154;
 
             lblWersja.Height =
                 30;
@@ -770,7 +850,7 @@ namespace GrafikBrygad
             lblWersja.Font =
                 new Font(
                     "Segoe UI",
-                    9,
+                    9.5f,
                     FontStyle.Italic);
 
             lblWersja.ForeColor =
@@ -802,10 +882,10 @@ namespace GrafikBrygad
         private void UtworzLegende()
         {
             panelLegenda.Location =
-                new Point(24, 784);
+                new Point(24, 802);
 
             panelLegenda.Width =
-                1132;
+                972;
 
             panelLegenda.Height =
                 58;
@@ -821,29 +901,29 @@ namespace GrafikBrygad
                 "N",
                 "noc",
                 Color.LightSkyBlue,
-                18,
-                140);
+                16,
+                125);
 
             DodajElementLegendy(
                 "P",
                 "popołudnie",
                 Color.LightGoldenrodYellow,
-                168,
-                170);
+                149,
+                160);
 
             DodajElementLegendy(
                 "R",
                 "rano",
                 Color.LightCoral,
-                348,
-                140);
+                317,
+                125);
 
             DodajElementLegendy(
                 "W",
                 "wolne",
                 Color.LightGray,
-                498,
-                140);
+                450,
+                125);
 
 
             // -------------------------------------------------
@@ -853,14 +933,14 @@ namespace GrafikBrygad
             DodajElementDnia(
                 "Sobota",
                 Color.Green,
-                660,
-                180);
+                590,
+                155);
 
             DodajElementDnia(
                 "Niedziela / Święto",
                 Color.Red,
-                850,
-                260);
+                753,
+                205);
         }
 
 
@@ -912,7 +992,7 @@ namespace GrafikBrygad
             lbl.Font =
                 new Font(
                     "Segoe UI",
-                    9,
+                    10,
                     FontStyle.Bold);
 
             lbl.ForeColor =
@@ -954,7 +1034,9 @@ namespace GrafikBrygad
                 34;
 
             panel.BackColor =
-                Color.White;
+                kolor == Color.Green
+                    ? Color.FromArgb(220, 245, 220)
+                    : Color.FromArgb(255, 225, 225);
 
             panel.BorderStyle =
                 BorderStyle.FixedSingle;
@@ -974,17 +1056,34 @@ namespace GrafikBrygad
             lbl.Font =
                 new Font(
                     "Segoe UI",
-                    9,
+                    10,
                     FontStyle.Bold);
 
             lbl.ForeColor =
-                kolor;
+                kolor == Color.Green
+                    ? Color.DarkGreen
+                    : Color.DarkRed;
 
             panel.Controls.Add(
                 lbl);
 
             panelLegenda.Controls.Add(
                 panel);
+        }
+
+
+        // =====================================================
+        // ROK WSTECZ
+        // =====================================================
+
+        private void BtnRokWstecz_Click(
+            object? sender,
+            EventArgs e)
+        {
+            aktualnyMiesiac =
+                aktualnyMiesiac.AddYears(-1);
+
+            GenerujGrafik();
         }
 
 
@@ -1013,6 +1112,21 @@ namespace GrafikBrygad
         {
             aktualnyMiesiac =
                 aktualnyMiesiac.AddMonths(1);
+
+            GenerujGrafik();
+        }
+
+
+        // =====================================================
+        // ROK DO PRZODU
+        // =====================================================
+
+        private void BtnRokPrzod_Click(
+            object? sender,
+            EventArgs e)
+        {
+            aktualnyMiesiac =
+                aktualnyMiesiac.AddYears(1);
 
             GenerujGrafik();
         }
@@ -1084,7 +1198,7 @@ namespace GrafikBrygad
 
             tabela.Columns[0]
                 .FillWeight =
-                55;
+                50;
 
 
             // -------------------------------------------------
@@ -1097,7 +1211,7 @@ namespace GrafikBrygad
 
             tabela.Columns[1]
                 .FillWeight =
-                65;
+                55;
 
 
             // -------------------------------------------------
@@ -1114,7 +1228,7 @@ namespace GrafikBrygad
 
                 tabela.Columns[i + 2]
                     .FillWeight =
-                    130;
+                    110;
             }
 
 
@@ -1236,47 +1350,89 @@ namespace GrafikBrygad
                     DayOfWeek.Sunday ||
                     swieto)
                 {
+                    Color tloDnia =
+                        Color.FromArgb(
+                            255,
+                            225,
+                            225);
+
+                    komorkaDnia.Style.BackColor =
+                        tloDnia;
+
+                    komorkaTygodnia.Style.BackColor =
+                        tloDnia;
+
                     komorkaDnia.Style.ForeColor =
-                        Color.Red;
+                        Color.DarkRed;
 
                     komorkaTygodnia.Style.ForeColor =
-                        Color.Red;
+                        Color.DarkRed;
+
+                    komorkaDnia.Style.SelectionBackColor =
+                        tloDnia;
+
+                    komorkaTygodnia.Style.SelectionBackColor =
+                        tloDnia;
 
                     komorkaDnia.Style.Font =
                         new Font(
                             "Segoe UI",
-                            10,
+                            13.5f,
                             FontStyle.Bold);
 
                     komorkaTygodnia.Style.Font =
                         new Font(
                             "Segoe UI",
-                            10,
+                            13.5f,
                             FontStyle.Bold);
                 }
                 else if (data.DayOfWeek ==
                     DayOfWeek.Saturday)
                 {
+                    Color tloDnia =
+                        Color.FromArgb(
+                            220,
+                            245,
+                            220);
+
+                    komorkaDnia.Style.BackColor =
+                        tloDnia;
+
+                    komorkaTygodnia.Style.BackColor =
+                        tloDnia;
+
                     komorkaDnia.Style.ForeColor =
-                        Color.Green;
+                        Color.DarkGreen;
 
                     komorkaTygodnia.Style.ForeColor =
-                        Color.Green;
+                        Color.DarkGreen;
+
+                    komorkaDnia.Style.SelectionBackColor =
+                        tloDnia;
+
+                    komorkaTygodnia.Style.SelectionBackColor =
+                        tloDnia;
 
                     komorkaDnia.Style.Font =
                         new Font(
                             "Segoe UI",
-                            10,
+                            13.5f,
                             FontStyle.Bold);
 
                     komorkaTygodnia.Style.Font =
                         new Font(
                             "Segoe UI",
-                            10,
+                            13.5f,
                             FontStyle.Bold);
                 }
                 else
                 {
+                    komorkaDnia.Style.BackColor =
+                        Color.White;
+
+                    komorkaTygodnia.Style.BackColor =
+                        Color.White;
+
                     komorkaDnia.Style.ForeColor =
                         Color.Black;
 
@@ -1329,22 +1485,9 @@ namespace GrafikBrygad
             }
 
             int widoczneWiersze =
-                tabela.DisplayedRowCount(false);
-
-            // Zabezpieczenie na moment, gdy kontrolka nie została
-            // jeszcze w pełni narysowana.
-            if (widoczneWiersze <= 0)
-            {
-                int wysokoscDanych =
-                    tabela.ClientSize.Height -
-                    tabela.ColumnHeadersHeight;
-
-                widoczneWiersze =
-                    Math.Max(
-                        1,
-                        wysokoscDanych /
-                        Math.Max(1, tabela.RowTemplate.Height));
-            }
+                Math.Min(
+                    LiczbaWidocznychDni,
+                    tabela.Rows.Count);
 
             int pierwszyWiersz =
                 indeksDzisiejszegoWiersza -
@@ -1427,6 +1570,12 @@ namespace GrafikBrygad
         {
             using Form okno =
                 new Form();
+
+            okno.AutoScaleMode =
+                AutoScaleMode.Dpi;
+
+            okno.AutoScaleDimensions =
+                new SizeF(96F, 96F);
 
             okno.Text =
                 "Szczegóły dnia";
@@ -2226,9 +2375,9 @@ namespace GrafikBrygad
                 tabela.Rows[
                     indeksDzisiejszegoWiersza];
 
-            // Dzisiejszy wiersz jest nieco wyższy od pozostałych,
-            // dzięki czemu łatwiej znaleźć go wzrokiem.
-            wiersz.Height = 34;
+            // Zachowujemy kolory sobót, niedziel, świąt oraz
+            // zmian N/P/R/W. Dzisiejszy dzień rozpoznajemy po
+            // pogrubieniu i mocnej ramce całego wiersza.
             wiersz.DividerHeight = 1;
 
             foreach (
@@ -2238,7 +2387,7 @@ namespace GrafikBrygad
                 komorka.Style.Font =
                     new Font(
                         "Segoe UI",
-                        10,
+                        13.5f,
                         FontStyle.Bold);
 
                 komorka.Style.SelectionBackColor =
@@ -2249,14 +2398,6 @@ namespace GrafikBrygad
                         ? Color.Black
                         : komorka.Style.ForeColor;
             }
-
-            wiersz.Cells[0]
-                .Style.BackColor =
-                Color.Gold;
-
-            wiersz.Cells[1]
-                .Style.BackColor =
-                Color.Gold;
         }
 
 
@@ -2285,6 +2426,14 @@ namespace GrafikBrygad
                 return;
             }
 
+            Graphics? graphics =
+                e.Graphics;
+
+            if (graphics is null)
+            {
+                return;
+            }
+
             e.Paint(
                 e.CellBounds,
                 DataGridViewPaintParts.All);
@@ -2295,14 +2444,14 @@ namespace GrafikBrygad
                         230,
                         140,
                         0),
-                    3);
+                    4);
 
             Rectangle rect =
                 e.CellBounds;
 
             // GÓRA
 
-            e.Graphics.DrawLine(
+            graphics.DrawLine(
                 pen,
                 rect.Left,
                 rect.Top + 1,
@@ -2311,7 +2460,7 @@ namespace GrafikBrygad
 
             // DÓŁ
 
-            e.Graphics.DrawLine(
+            graphics.DrawLine(
                 pen,
                 rect.Left,
                 rect.Bottom - 2,
@@ -2322,7 +2471,7 @@ namespace GrafikBrygad
 
             if (e.ColumnIndex == 0)
             {
-                e.Graphics.DrawLine(
+                graphics.DrawLine(
                     pen,
                     rect.Left + 1,
                     rect.Top,
@@ -2335,7 +2484,7 @@ namespace GrafikBrygad
             if (e.ColumnIndex ==
                 tabela.Columns.Count - 1)
             {
-                e.Graphics.DrawLine(
+                graphics.DrawLine(
                     pen,
                     rect.Right - 2,
                     rect.Top,
@@ -2396,8 +2545,16 @@ namespace GrafikBrygad
             object? sender,
             PrintPageEventArgs e)
         {
-            Graphics g =
+            Graphics? g =
                 e.Graphics;
+
+            if (g is null)
+            {
+                e.HasMorePages =
+                    false;
+
+                return;
+            }
 
             Rectangle obszar =
                 e.MarginBounds;
@@ -2685,23 +2842,22 @@ namespace GrafikBrygad
                             .Style.ForeColor;
 
                         if (kolorDaty ==
-                            Color.Green)
+                            Color.DarkGreen)
                         {
                             kolorTekstu =
-                                Brushes.Green;
+                                Brushes.DarkGreen;
+
+                            tlo =
+                                Brushes.LightGreen;
                         }
                         else if (kolorDaty ==
-                            Color.Red)
+                            Color.DarkRed)
                         {
                             kolorTekstu =
-                                Brushes.Red;
-                        }
+                                Brushes.DarkRed;
 
-                        if (wiersz ==
-                            indeksDzisiejszegoWiersza)
-                        {
                             tlo =
-                                Brushes.Gold;
+                                Brushes.MistyRose;
                         }
                     }
 
