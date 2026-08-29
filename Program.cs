@@ -1,4 +1,4 @@
-namespace GrafikBrygad
+﻿namespace GrafikBrygad
 {
     internal static class Program
     {
@@ -8,10 +8,15 @@ namespace GrafikBrygad
         [STAThread]
         static void Main()
         {
-            // To customize application configuration such as set high DPI settings or default font,
-            // see https://aka.ms/applicationconfiguration.
+            // v1.20-beta.10
+            //
+            // PerMonitorV2 jest ustawione w GrafikBrygad.csproj.
+            // ApplicationConfiguration.Initialize() wykorzystuje
+            // tę konfigurację przed utworzeniem pierwszego okna.
             ApplicationConfiguration.Initialize();
-            Application.Run(new Form1());
+
+            Application.Run(
+                new Form1());
         }
     }
 }
