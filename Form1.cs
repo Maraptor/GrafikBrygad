@@ -19,7 +19,7 @@ namespace GrafikBrygad
             "Grafik Brygad VEOLIA Energia Łódź";
 
         private const string WersjaProgramu =
-            "wersja 1.20";
+            "wersja 1.21";
 
         private const string AutorProgramu =
             "Marek Walaszczyk";
@@ -120,6 +120,9 @@ namespace GrafikBrygad
             new Button();
 
         private Button btnWidok =
+            new Button();
+
+        private Button btnInfo =
             new Button();
 
         private Label lblMiesiac =
@@ -1007,10 +1010,10 @@ namespace GrafikBrygad
             // -------------------------------------------------
 
             btnWidok.Text =
-                "WIDOK VEOLIA";
+                "WIDOK PROSTY";
 
             btnWidok.Location =
-                new Point(210, 748);
+                new Point(115, 748);
 
             btnWidok.Width = 190;
             btnWidok.Height = 42;
@@ -1037,7 +1040,7 @@ namespace GrafikBrygad
                 "PODGLĄD WYDRUKU";
 
             btnPodglad.Location =
-                new Point(415, 748);
+                new Point(315, 748);
 
             btnPodglad.Width = 190;
             btnPodglad.Height = 42;
@@ -1064,7 +1067,7 @@ namespace GrafikBrygad
                 "DRUKUJ A4";
 
             btnDrukuj.Location =
-                new Point(620, 748);
+                new Point(515, 748);
 
             btnDrukuj.Width = 190;
             btnDrukuj.Height = 42;
@@ -1081,6 +1084,33 @@ namespace GrafikBrygad
 
             btnDrukuj.Click +=
                 BtnDrukuj_Click;
+
+
+            // -------------------------------------------------
+            // INFO - KRÓTKA INSTRUKCJA UŻYTKOWANIA
+            // -------------------------------------------------
+
+            btnInfo.Text =
+                "INFO";
+
+            btnInfo.Location =
+                new Point(715, 748);
+
+            btnInfo.Width = 190;
+            btnInfo.Height = 42;
+
+            btnInfo.Font =
+                new Font(
+                    "Segoe UI",
+                    10,
+                    FontStyle.Bold);
+
+            StylizujPrzycisk(
+                btnInfo,
+                false);
+
+            btnInfo.Click +=
+                BtnInfo_Click;
 
 
             // -------------------------------------------------
@@ -1308,6 +1338,16 @@ namespace GrafikBrygad
             podgladDruku.Document =
                 dokumentDruku;
 
+            // Własne skalowanie PrintPreviewDialog przy pierwszym
+            // otwarciu potrafiło powiększyć okno drugi raz przy
+            // DPI 125% / 150%. Wyłączamy je i pozycjonujemy
+            // podgląd samodzielnie w BtnPodglad_Click.
+            podgladDruku.AutoScaleMode =
+                AutoScaleMode.None;
+
+            podgladDruku.StartPosition =
+                FormStartPosition.Manual;
+
 
             // -------------------------------------------------
             // DODANIE ELEMENTÓW DO OKNA
@@ -1342,6 +1382,9 @@ namespace GrafikBrygad
 
             this.Controls.Add(
                 btnDrukuj);
+
+            this.Controls.Add(
+                btnInfo);
 
             this.Controls.Add(
                 tabela);
@@ -1732,7 +1775,7 @@ namespace GrafikBrygad
                 DodajElementLegendy(
                     "W/X",
                     "wolne",
-                    Color.LightGray,
+                    Color.WhiteSmoke,
                     376,
                     145);
             }
@@ -1882,6 +1925,206 @@ namespace GrafikBrygad
 
 
         // =====================================================
+        // INFO - KRÓTKA INSTRUKCJA UŻYTKOWANIA
+        // =====================================================
+
+        private void BtnInfo_Click(
+            object? sender,
+            EventArgs e)
+        {
+            using Form okno =
+                new Form();
+
+            okno.AutoScaleMode =
+                AutoScaleMode.None;
+
+            okno.Text =
+                "Informacje - Grafik Brygad";
+
+            okno.StartPosition =
+                FormStartPosition.CenterParent;
+
+            okno.FormBorderStyle =
+                FormBorderStyle.FixedDialog;
+
+            okno.MaximizeBox =
+                false;
+
+            okno.MinimizeBox =
+                false;
+
+            okno.ShowInTaskbar =
+                false;
+
+            okno.ClientSize =
+                new Size(
+                    760,
+                    610);
+
+            Label lblTytulInfo =
+                new Label();
+
+            lblTytulInfo.Text =
+                "KRÓTKA INSTRUKCJA UŻYTKOWANIA";
+
+            lblTytulInfo.Location =
+                new Point(
+                    28,
+                    22);
+
+            lblTytulInfo.Size =
+                new Size(
+                    704,
+                    42);
+
+            lblTytulInfo.TextAlign =
+                ContentAlignment.MiddleCenter;
+
+            lblTytulInfo.Font =
+                new Font(
+                    "Segoe UI",
+                    16F,
+                    FontStyle.Bold);
+
+            lblTytulInfo.ForeColor =
+                Color.FromArgb(
+                    31,
+                    38,
+                    47);
+
+
+            Label lblInstrukcja =
+                new Label();
+
+            lblInstrukcja.Location =
+                new Point(
+                    42,
+                    82);
+
+            lblInstrukcja.Size =
+                new Size(
+                    676,
+                    420);
+
+            lblInstrukcja.Font =
+                new Font(
+                    "Segoe UI",
+                    10.5F,
+                    FontStyle.Regular);
+
+            lblInstrukcja.ForeColor =
+                Color.FromArgb(
+                    31,
+                    38,
+                    47);
+
+            lblInstrukcja.Text =
+                "• DZIEŃ / TYDZ.\n" +
+                "  Kliknij numer dnia lub skrót dnia tygodnia, aby otworzyć okno „Szczegóły dnia”.\n\n" +
+
+                "• NAGŁÓWEK BRYGADY\n" +
+                "  Kliknij nagłówek Brygada A-E (lub I-V w Widoku Prostym), aby otworzyć kwartalny okres rozliczeniowy.\n\n" +
+
+                "• NAWIGACJA\n" +
+                "  Przyciski ROK -1 / ROK +1 oraz POPRZEDNI / NASTĘPNY MIESIĄC służą do zmiany wyświetlanego okresu. " +
+                "Przycisk AKTUALNY wraca do bieżącego miesiąca i dnia.\n\n" +
+
+                "• WIDOK PROSTY / WIDOK STANDARDOWY\n" +
+                "  Przełącza sposób prezentacji grafiku pomiędzy oznaczeniami I-V, 1/2/3/w/x a kolorowym widokiem R/P/N/W/X.\n\n" +
+
+                "• PODGLĄD WYDRUKU / DRUKUJ A4\n" +
+                "  Drukowany jest cały kwartał zawierający aktualnie wyświetlany miesiąc. " +
+                "Na jednej stronie A4 poziomo znajdują się trzy miesiące oraz podsumowanie okresu rozliczeniowego.\n\n" +
+
+                "• KOLORY DNI\n" +
+                "  Sobota jest oznaczona kolorem żółtym, a niedziela i święto kolorem czerwonym.";
+
+
+            Label lblStopkaInfo =
+                new Label();
+
+            lblStopkaInfo.Location =
+                new Point(
+                    42,
+                    510);
+
+            lblStopkaInfo.Size =
+                new Size(
+                    676,
+                    28);
+
+            lblStopkaInfo.TextAlign =
+                ContentAlignment.MiddleCenter;
+
+            lblStopkaInfo.Font =
+                new Font(
+                    "Segoe UI",
+                    9F,
+                    FontStyle.Italic);
+
+            lblStopkaInfo.ForeColor =
+                Color.DimGray;
+
+            lblStopkaInfo.Text =
+                $"{NazwaProgramu} • {WersjaProgramu} • {AutorProgramu}";
+
+
+            Button btnZamknijInfo =
+                new Button();
+
+            btnZamknijInfo.Text =
+                "ZAMKNIJ";
+
+            btnZamknijInfo.Location =
+                new Point(
+                    285,
+                    552);
+
+            btnZamknijInfo.Size =
+                new Size(
+                    190,
+                    40);
+
+            btnZamknijInfo.Font =
+                new Font(
+                    "Segoe UI",
+                    9.5F,
+                    FontStyle.Bold);
+
+            StylizujPrzycisk(
+                btnZamknijInfo,
+                false);
+
+            btnZamknijInfo.DialogResult =
+                DialogResult.Cancel;
+
+            okno.CancelButton =
+                btnZamknijInfo;
+
+            okno.Controls.Add(
+                lblTytulInfo);
+
+            okno.Controls.Add(
+                lblInstrukcja);
+
+            okno.Controls.Add(
+                lblStopkaInfo);
+
+            okno.Controls.Add(
+                btnZamknijInfo);
+
+            DopasujOknoPomocniczeDoSkaliGlownego(
+                okno,
+                new Size(
+                    760,
+                    610));
+
+            okno.ShowDialog(
+                this);
+        }
+
+
+        // =====================================================
         // PRZEŁĄCZANIE WIDOKU STANDARD / VEOLIA
         // =====================================================
 
@@ -1910,7 +2153,7 @@ namespace GrafikBrygad
             btnWidok.Text =
                 widokVeolia
                     ? "WIDOK STANDARDOWY"
-                    : "WIDOK VEOLIA";
+                    : "WIDOK PROSTY";
 
             OdswiezLegende();
 
@@ -2685,7 +2928,7 @@ namespace GrafikBrygad
         // SKALOWANIE OKIEN POMOCNICZYCH
         // =====================================================
         //
-        // "Okres rozliczeniowy" i "Szczegóły dnia" korzystają
+        // "Okres rozliczeniowy", "Szczegóły dnia" i "Info" korzystają
         // z tej samej końcowej skali co główne okno.
         //
         // Dzięki temu Windows nie powiększa ich niezależnie
@@ -3088,7 +3331,7 @@ namespace GrafikBrygad
 
             lblOpisWymiaru.Text =
                 "Liczba dni roboczych w okresie " +
-                "rozliczeniowym (wymiar czasu)";
+                "rozliczeniowym (wymiar czasu pracy)";
 
             lblOpisWymiaru.Location =
                 new Point(
@@ -3396,7 +3639,7 @@ namespace GrafikBrygad
             lblOpisDopracowaniaRocznego.Font =
                 new Font(
                     "Segoe UI",
-                    9.2F,
+                    9.5F,
                     FontStyle.Regular);
 
             tabelaOkresu.Controls.Add(
@@ -3468,7 +3711,9 @@ namespace GrafikBrygad
                     new Font(
                         "Segoe UI",
                         14F,
-                        FontStyle.Bold);
+                        i == zaznaczonaBrygada
+                            ? FontStyle.Bold
+                            : FontStyle.Regular);
 
                 lblDopracowanie.BackColor =
                     i == zaznaczonaBrygada
@@ -3504,7 +3749,9 @@ namespace GrafikBrygad
                     new Font(
                         "Segoe UI",
                         14F,
-                        FontStyle.Bold);
+                        i == zaznaczonaBrygada
+                            ? FontStyle.Bold
+                            : FontStyle.Regular);
 
                 lblDopracowanieRoczne.BackColor =
                     i == zaznaczonaBrygada
@@ -4286,8 +4533,9 @@ namespace GrafikBrygad
                 case 'W':
                 case 'X':
                     // W i X są nadal oddzielnymi stanami
-                    // logicznymi, lecz celowo mają ten sam kolor.
-                    return Color.LightGray;
+                    // logicznymi, lecz celowo mają ten sam,
+                    // bardzo jasny kolor dnia wolnego.
+                    return Color.WhiteSmoke;
 
                 default:
                     return Color.White;
@@ -4989,13 +5237,80 @@ namespace GrafikBrygad
             object? sender,
             EventArgs e)
         {
-            podgladDruku.Width =
+            // PrintPreviewDialog jest przechowywany jako jedno
+            // okno i przy pierwszym pokazaniu system potrafi
+            // zastosować do niego dodatkowe skalowanie DPI.
+            //
+            // Dlatego przy KAŻDYM otwarciu przywracamy stan
+            // normalny i wyliczamy rozmiar z rzeczywistego
+            // obszaru roboczego monitora, na którym znajduje się
+            // główne okno programu.
+
+            Screen ekran =
+                Screen.FromControl(
+                    this);
+
+            Rectangle obszarRoboczy =
+                ekran.WorkingArea;
+
+            const int marginesOkna =
+                24;
+
+            const int preferowanaSzerokosc =
                 1200;
 
-            podgladDruku.Height =
+            const int preferowanaWysokosc =
                 850;
 
-            podgladDruku.ShowDialog();
+            int maksymalnaSzerokosc =
+                Math.Max(
+                    640,
+                    obszarRoboczy.Width -
+                    2 * marginesOkna);
+
+            int maksymalnaWysokosc =
+                Math.Max(
+                    480,
+                    obszarRoboczy.Height -
+                    2 * marginesOkna);
+
+            int szerokosc =
+                Math.Min(
+                    preferowanaSzerokosc,
+                    maksymalnaSzerokosc);
+
+            int wysokosc =
+                Math.Min(
+                    preferowanaWysokosc,
+                    maksymalnaWysokosc);
+
+            int x =
+                obszarRoboczy.Left +
+                (obszarRoboczy.Width -
+                 szerokosc) /
+                2;
+
+            int y =
+                obszarRoboczy.Top +
+                (obszarRoboczy.Height -
+                 wysokosc) /
+                2;
+
+            podgladDruku.WindowState =
+                FormWindowState.Normal;
+
+            podgladDruku.StartPosition =
+                FormStartPosition.Manual;
+
+            podgladDruku.Bounds =
+                new Rectangle(
+                    x,
+                    y,
+                    szerokosc,
+                    wysokosc);
+
+            podgladDruku.ShowDialog(
+                this);
         }
 
 
@@ -5022,8 +5337,21 @@ namespace GrafikBrygad
 
 
         // =====================================================
-        // RYSOWANIE WYDRUKU A4
+        // RYSOWANIE WYDRUKU A4 - CAŁY KWARTAŁ
         // =====================================================
+        //
+        // Na jednej stronie A4 w układzie poziomym drukujemy
+        // trzy miesiące okresu rozliczeniowego.
+        //
+        // Układ jest celowo zwarty:
+        // - numer dnia i skrót dnia tygodnia są w jednej kolumnie,
+        // - trzy miesiące są ustawione obok siebie,
+        // - pod tabelami znajduje się podsumowanie kwartału,
+        // - wydruk zachowuje aktualny tryb prezentacji:
+        //   Standard albo Prosty.
+        //
+        // Dzięki temu jedna kartka A4 przedstawia cały kwartał,
+        // podobnie jak papierowy grafik VEOLIA.
 
         private void DokumentDruku_PrintPage(
             object? sender,
@@ -5043,6 +5371,17 @@ namespace GrafikBrygad
             Rectangle obszar =
                 e.MarginBounds;
 
+            DateTime poczatekKwartału =
+                PobierzPoczatekOkresuRozliczeniowego(
+                    aktualnyMiesiac);
+
+            DateTime koniecKwartału =
+                PobierzKoniecOkresuRozliczeniowego(
+                    aktualnyMiesiac);
+
+            int numerKwartału =
+                ((poczatekKwartału.Month - 1) / 3) + 1;
+
 
             // -------------------------------------------------
             // CZCIONKI
@@ -5051,497 +5390,875 @@ namespace GrafikBrygad
             using Font fontTytul =
                 new Font(
                     "Segoe UI",
-                    15,
+                    10.5F,
                     FontStyle.Bold);
 
             using Font fontMiesiac =
                 new Font(
                     "Segoe UI",
-                    12,
+                    8.5F,
                     FontStyle.Bold);
 
             using Font fontNaglowek =
                 new Font(
                     "Segoe UI",
-                    8,
+                    6.4F,
                     FontStyle.Bold);
 
             using Font fontKomorka =
                 new Font(
                     "Segoe UI",
-                    7);
+                    6.2F,
+                    FontStyle.Regular);
 
-            using Font fontAutor =
+            using Font fontDzien =
                 new Font(
                     "Segoe UI",
-                    7,
+                    6.2F,
+                    FontStyle.Bold);
+
+            using Font fontPodsumowanie =
+                new Font(
+                    "Segoe UI",
+                    6.0F,
+                    FontStyle.Regular);
+
+            using Font fontWartosc =
+                new Font(
+                    "Segoe UI",
+                    6.5F,
+                    FontStyle.Bold);
+
+            using Font fontStopka =
+                new Font(
+                    "Segoe UI",
+                    5.8F,
                     FontStyle.Italic);
+
+
+            // -------------------------------------------------
+            // FORMATY TEKSTU
+            // -------------------------------------------------
+
+            using StringFormat sfSrodek =
+                new StringFormat();
+
+            sfSrodek.Alignment =
+                StringAlignment.Center;
+
+            sfSrodek.LineAlignment =
+                StringAlignment.Center;
+
+
+            using StringFormat sfLewo =
+                new StringFormat();
+
+            sfLewo.Alignment =
+                StringAlignment.Near;
+
+            sfLewo.LineAlignment =
+                StringAlignment.Center;
+
+            sfLewo.FormatFlags =
+                StringFormatFlags.NoWrap;
 
 
             // -------------------------------------------------
             // TYTUŁ
             // -------------------------------------------------
 
+            string rzymskiKwartał =
+                numerKwartału switch
+                {
+                    1 => "I",
+                    2 => "II",
+                    3 => "III",
+                    4 => "IV",
+                    _ => numerKwartału.ToString()
+                };
+
             string tytul =
-                NazwaProgramu +
-                " (" +
-                WersjaProgramu +
-                ")";
+                "Grafik Brygad – " +
+                rzymskiKwartał +
+                " kwartał " +
+                poczatekKwartału.Year +
+                (widokVeolia
+                    ? " – widok prosty"
+                    : " – widok standardowy");
 
-            SizeF rozmiarTytulu =
-                g.MeasureString(
-                    tytul,
-                    fontTytul);
-
-            float xTytul =
-                obszar.Left +
-                (obszar.Width -
-                rozmiarTytulu.Width) / 2;
-
-            float y =
-                obszar.Top;
+            RectangleF rectTytul =
+                new RectangleF(
+                    obszar.Left,
+                    obszar.Top,
+                    obszar.Width,
+                    20);
 
             g.DrawString(
                 tytul,
                 fontTytul,
                 Brushes.Black,
-                xTytul,
-                y);
+                rectTytul,
+                sfSrodek);
 
-            y += 30;
+            float yTabel =
+                obszar.Top +
+                23;
 
 
             // -------------------------------------------------
-            // MIESIĄC
+            // GEOMETRIA TRZECH TABEL
             // -------------------------------------------------
 
-            string miesiac =
-                lblMiesiac.Text +
-                (widokVeolia
-                    ? " – widok VEOLIA"
-                    : "");
+            const float odstepMiedzyMiesiacami =
+                7.0F;
 
-            SizeF rozmiarMiesiaca =
-                g.MeasureString(
-                    miesiac,
-                    fontMiesiac);
+            const float wysokoscNazwyMiesiaca =
+                17.0F;
 
-            float xMiesiac =
-                obszar.Left +
+            const float wysokoscNaglowka =
+                17.0F;
+
+            const float wysokoscPodsumowania =
+                67.0F;
+
+            const float odstepPrzedPodsumowaniem =
+                5.0F;
+
+            const float wysokoscStopki =
+                11.0F;
+
+            float szerokoscMiesiaca =
                 (obszar.Width -
-                rozmiarMiesiaca.Width) / 2;
+                 2 * odstepMiedzyMiesiacami) /
+                3.0F;
 
-            g.DrawString(
-                miesiac,
-                fontMiesiac,
-                Brushes.Black,
-                xMiesiac,
-                y);
-
-            y += 28;
-
-
-            // -------------------------------------------------
-            // WYMIARY TABELI
-            // -------------------------------------------------
-
-            int liczbaKolumn =
-                tabela.Columns.Count;
-
-            int liczbaWierszy =
-                tabela.Rows.Count;
-
-            float szerokoscTabeli =
-                obszar.Width;
-
-            float wysokoscNaglowka =
-                22;
-
-            float dostepnaWysokosc =
+            float dostepnaWysokoscNaWiersze =
                 obszar.Bottom -
-                y -
-                35;
+                yTabel -
+                wysokoscNazwyMiesiaca -
+                wysokoscNaglowka -
+                wysokoscPodsumowania -
+                odstepPrzedPodsumowaniem -
+                wysokoscStopki;
 
             float wysokoscWiersza =
-                dostepnaWysokosc /
-                liczbaWierszy;
+                dostepnaWysokoscNaWiersze /
+                31.0F;
 
-            if (wysokoscWiersza > 18)
+            // Na zwykłym A4 w poziomie otrzymujemy około
+            // 14-16 jednostek wysokości na dzień.
+            // Ograniczenie zapobiega nadmiernemu rozciąganiu
+            // tabeli przy drukarkach z bardzo małymi marginesami.
+            wysokoscWiersza =
+                Math.Min(
+                    15.5F,
+                    wysokoscWiersza);
+
+            wysokoscWiersza =
+                Math.Max(
+                    7.0F,
+                    wysokoscWiersza);
+
+
+            // -------------------------------------------------
+            // TRZY MIESIĄCE KWARTAŁU
+            // -------------------------------------------------
+
+            for (int i = 0;
+                 i < 3;
+                 i++)
             {
-                wysokoscWiersza = 18;
-            }
+                DateTime miesiac =
+                    poczatekKwartału.AddMonths(
+                        i);
 
+                float x =
+                    obszar.Left +
+                    i *
+                    (szerokoscMiesiaca +
+                     odstepMiedzyMiesiacami);
 
-            // -------------------------------------------------
-            // SZEROKOŚCI KOLUMN NA WYDRUKU
-            // Dzień i dzień tygodnia są węższe od brygad
-            // -------------------------------------------------
-
-            float[] wagiKolumn =
-                new float[liczbaKolumn];
-
-            float sumaWag = 0;
-
-            for (int kol = 0;
-                 kol < liczbaKolumn;
-                 kol++)
-            {
-                if (kol == 0)
-                {
-                    wagiKolumn[kol] = 55;
-                }
-                else if (kol == 1)
-                {
-                    wagiKolumn[kol] = 65;
-                }
-                else
-                {
-                    wagiKolumn[kol] = 130;
-                }
-
-                sumaWag +=
-                    wagiKolumn[kol];
-            }
-
-            float[] szerokosciKolumn =
-                new float[liczbaKolumn];
-
-            for (int kol = 0;
-                 kol < liczbaKolumn;
-                 kol++)
-            {
-                szerokosciKolumn[kol] =
-                    szerokoscTabeli *
-                    wagiKolumn[kol] /
-                    sumaWag;
-            }
-
-
-            // -------------------------------------------------
-            // FORMAT TEKSTU
-            // -------------------------------------------------
-
-            using StringFormat sf =
-                new StringFormat();
-
-            sf.Alignment =
-                StringAlignment.Center;
-
-            sf.LineAlignment =
-                StringAlignment.Center;
-
-
-            // -------------------------------------------------
-            // NAGŁÓWKI
-            // -------------------------------------------------
-
-            float xKolumny =
-                obszar.Left;
-
-            for (int kol = 0;
-                 kol < liczbaKolumn;
-                 kol++)
-            {
-                RectangleF rect =
-                    new RectangleF(
-                        xKolumny,
-                        y,
-                        szerokosciKolumn[kol],
-                        wysokoscNaglowka);
-
-                g.FillRectangle(
-                    Brushes.Gainsboro,
-                    rect);
-
-                g.DrawRectangle(
-                    Pens.Black,
-                    rect.X,
-                    rect.Y,
-                    rect.Width,
-                    rect.Height);
-
-                string naglowek =
-                    tabela.Columns[kol]
-                    .HeaderText;
-
-                g.DrawString(
-                    naglowek,
+                RysujMiesiacNaWydrukuKwartalnym(
+                    g,
+                    miesiac,
+                    x,
+                    yTabel,
+                    szerokoscMiesiaca,
+                    wysokoscNazwyMiesiaca,
+                    wysokoscNaglowka,
+                    wysokoscWiersza,
+                    fontMiesiac,
                     fontNaglowek,
-                    Brushes.Black,
-                    rect,
-                    sf);
-
-                xKolumny +=
-                    szerokosciKolumn[kol];
-            }
-
-            y +=
-                wysokoscNaglowka;
-
-
-            // -------------------------------------------------
-            // WIERSZE GRAFIKU
-            // -------------------------------------------------
-
-            for (int wiersz = 0;
-                 wiersz < liczbaWierszy;
-                 wiersz++)
-            {
-                xKolumny =
-                    obszar.Left;
-
-                for (int kol = 0;
-                     kol < liczbaKolumn;
-                     kol++)
-                {
-                    RectangleF rect =
-                        new RectangleF(
-                            xKolumny,
-                            y +
-                            wiersz *
-                            wysokoscWiersza,
-                            szerokosciKolumn[kol],
-                            wysokoscWiersza);
-
-                    string wartosc =
-                        tabela.Rows[wiersz]
-                        .Cells[kol]
-                        .Value?
-                        .ToString() ?? "";
-
-                    Brush tlo =
-                        Brushes.White;
-
-                    Brush kolorTekstu =
-                        Brushes.Black;
-
-
-                    // -----------------------------------------
-                    // DZIEŃ MIESIĄCA I DZIEŃ TYGODNIA
-                    // -----------------------------------------
-
-                    if (kol == 0 ||
-                        kol == 1)
-                    {
-                        if (int.TryParse(
-                            tabela.Rows[wiersz]
-                            .Cells[0]
-                            .Value?
-                            .ToString(),
-                            out int numerDniaDaty))
-                        {
-                            DateTime dataWierszaDaty =
-                                new DateTime(
-                                    aktualnyMiesiac.Year,
-                                    aktualnyMiesiac.Month,
-                                    numerDniaDaty);
-
-                            if (dataWierszaDaty.DayOfWeek ==
-                                    DayOfWeek.Sunday ||
-                                CzySwieto(
-                                    dataWierszaDaty))
-                            {
-                                tlo =
-                                    Brushes.Red;
-
-                                kolorTekstu =
-                                    Brushes.White;
-                            }
-                            else if (dataWierszaDaty.DayOfWeek ==
-                                DayOfWeek.Saturday)
-                            {
-                                tlo =
-                                    Brushes.Yellow;
-
-                                kolorTekstu =
-                                    Brushes.Black;
-                            }
-                        }
-                    }
-
-
-                    // -----------------------------------------
-                    // ZMIANY
-                    // -----------------------------------------
-
-                    if (kol >= 2)
-                    {
-                        if (widokVeolia)
-                        {
-                            if (int.TryParse(
-                                tabela.Rows[wiersz]
-                                .Cells[0]
-                                .Value?
-                                .ToString(),
-                                out int numerDnia))
-                            {
-                                DateTime dataWiersza =
-                                    new DateTime(
-                                        aktualnyMiesiac.Year,
-                                        aktualnyMiesiac.Month,
-                                        numerDnia);
-
-                                int indeksBrygady =
-                                    kol - 2;
-
-                                tlo =
-                                    CzyKorektaWolnejNiedzieli(
-                                        dataWiersza,
-                                        datyStartowe[indeksBrygady])
-                                        ? Brushes.Khaki
-                                        : Brushes.White;
-                            }
-                        }
-                        else
-                        {
-                            switch (wartosc)
-                            {
-                                case "N":
-                                    tlo =
-                                        Brushes.LightSkyBlue;
-                                    break;
-
-                                case "P":
-                                    tlo =
-                                        Brushes.Orange;
-                                    break;
-
-                                case "R":
-                                    tlo =
-                                        Brushes.LightGreen;
-                                    break;
-
-                                case "W":
-                                case "X":
-                                    tlo =
-                                        Brushes.LightGray;
-                                    break;
-                            }
-                        }
-
-                        // Niezależnie od wybranego widoku
-                        // zmiany P/N przypadające 31 grudnia
-                        // są na wydruku oznaczone jak praca
-                        // w dzień świąteczny.
-                        if (int.TryParse(
-                            tabela.Rows[wiersz]
-                            .Cells[0]
-                            .Value?
-                            .ToString(),
-                            out int numerDniaSylwester))
-                        {
-                            DateTime dataWierszaSylwester =
-                                new DateTime(
-                                    aktualnyMiesiac.Year,
-                                    aktualnyMiesiac.Month,
-                                    numerDniaSylwester);
-
-                            char zmianaRzeczywista =
-                                tabela.Rows[wiersz]
-                                .Cells[kol]
-                                .Tag is char tagZmiany
-                                    ? tagZmiany
-                                    : '\0';
-
-                            if (CzyZmianaSwiatecznaWSylwestra(
-                                dataWierszaSylwester,
-                                zmianaRzeczywista))
-                            {
-                                tlo =
-                                    Brushes.Red;
-
-                                kolorTekstu =
-                                    Brushes.White;
-                            }
-                        }
-                    }
-
-
-                    g.FillRectangle(
-                        tlo,
-                        rect);
-
-                    g.DrawRectangle(
-                        Pens.Black,
-                        rect.X,
-                        rect.Y,
-                        rect.Width,
-                        rect.Height);
-
-                    g.DrawString(
-                        wartosc,
-                        fontKomorka,
-                        kolorTekstu,
-                        rect,
-                        sf);
-
-                    xKolumny +=
-                        szerokosciKolumn[kol];
-                }
-
-
-                // ---------------------------------------------
-                // RAMKA DZISIAJ NA WYDRUKU
-                // ---------------------------------------------
-
-                if (wiersz ==
-                    indeksDzisiejszegoWiersza)
-                {
-                    using Pen pen =
-                        new Pen(
-                            Color.DarkOrange,
-                            3);
-
-                    RectangleF ramka =
-                        new RectangleF(
-                            obszar.Left,
-                            y +
-                            wiersz *
-                            wysokoscWiersza,
-                            szerokoscTabeli,
-                            wysokoscWiersza);
-
-                    g.DrawRectangle(
-                        pen,
-                        ramka.X,
-                        ramka.Y,
-                        ramka.Width,
-                        ramka.Height);
-                }
+                    fontKomorka,
+                    fontDzien,
+                    sfSrodek);
             }
 
 
             // -------------------------------------------------
-            // AUTOR
+            // PODSUMOWANIE OKRESU ROZLICZENIOWEGO
             // -------------------------------------------------
 
-            float dolTabeli =
-                y +
-                liczbaWierszy *
+            float yPodsumowania =
+                yTabel +
+                wysokoscNazwyMiesiaca +
+                wysokoscNaglowka +
+                31 *
                 wysokoscWiersza +
-                10;
+                odstepPrzedPodsumowaniem;
+
+            RysujPodsumowanieWydrukuKwartalnego(
+                g,
+                poczatekKwartału,
+                koniecKwartału,
+                obszar.Left,
+                yPodsumowania,
+                obszar.Width,
+                wysokoscPodsumowania,
+                fontPodsumowanie,
+                fontWartosc,
+                sfSrodek,
+                sfLewo);
+
+
+            // -------------------------------------------------
+            // STOPKA
+            // -------------------------------------------------
+
+            RectangleF rectStopka =
+                new RectangleF(
+                    obszar.Left,
+                    obszar.Bottom -
+                    wysokoscStopki,
+                    obszar.Width,
+                    wysokoscStopki);
+
+            string stopka =
+                NazwaProgramu +
+                " • " +
+                WersjaProgramu +
+                " • Autor: " +
+                AutorProgramu;
 
             g.DrawString(
-                "Autor programu: " +
-                AutorProgramu +
-                "  •  projekt od: " +
-                RozpoczecieProjektu,
-                fontAutor,
+                stopka,
+                fontStopka,
                 Brushes.DimGray,
-                obszar.Left,
-                dolTabeli);
-
-            g.DrawString(
-                "Nowa wersja: " +
-                AdresProjektu,
-                fontAutor,
-                Brushes.DimGray,
-                obszar.Left,
-                dolTabeli + 12);
+                rectStopka,
+                sfLewo);
 
 
             e.HasMorePages =
                 false;
         }
+
+
+        // =====================================================
+        // JEDEN MIESIĄC NA WYDRUKU KWARTALNYM
+        // =====================================================
+
+        private void RysujMiesiacNaWydrukuKwartalnym(
+            Graphics g,
+            DateTime miesiac,
+            float x,
+            float y,
+            float szerokosc,
+            float wysokoscNazwyMiesiaca,
+            float wysokoscNaglowka,
+            float wysokoscWiersza,
+            Font fontMiesiac,
+            Font fontNaglowek,
+            Font fontKomorka,
+            Font fontDzien,
+            StringFormat sfSrodek)
+        {
+            CultureInfo polska =
+                CultureInfo.GetCultureInfo(
+                    "pl-PL");
+
+            string nazwaMiesiaca =
+                miesiac.ToString(
+                    "MMMM",
+                    polska);
+
+            nazwaMiesiaca =
+                polska.TextInfo.ToTitleCase(
+                    nazwaMiesiaca);
+
+            RectangleF rectMiesiac =
+                new RectangleF(
+                    x,
+                    y,
+                    szerokosc,
+                    wysokoscNazwyMiesiaca);
+
+            g.FillRectangle(
+                Brushes.Gainsboro,
+                rectMiesiac);
+
+            g.DrawRectangle(
+                Pens.Black,
+                rectMiesiac.X,
+                rectMiesiac.Y,
+                rectMiesiac.Width,
+                rectMiesiac.Height);
+
+            g.DrawString(
+                nazwaMiesiaca,
+                fontMiesiac,
+                Brushes.Black,
+                rectMiesiac,
+                sfSrodek);
+
+
+            // -------------------------------------------------
+            // SZEROKOŚCI KOLUMN
+            // Pierwsza kolumna łączy numer dnia i dzień tygodnia.
+            // -------------------------------------------------
+
+            const float wagaDnia =
+                1.75F;
+
+            const float wagaBrygady =
+                1.0F;
+
+            float sumaWag =
+                wagaDnia +
+                5 *
+                wagaBrygady;
+
+            float szerokoscDnia =
+                szerokosc *
+                wagaDnia /
+                sumaWag;
+
+            float szerokoscBrygady =
+                szerokosc *
+                wagaBrygady /
+                sumaWag;
+
+            float yNaglowka =
+                y +
+                wysokoscNazwyMiesiaca;
+
+
+            // -------------------------------------------------
+            // NAGŁÓWEK: dzień + 5 brygad
+            // -------------------------------------------------
+
+            RectangleF rectDzienNaglowek =
+                new RectangleF(
+                    x,
+                    yNaglowka,
+                    szerokoscDnia,
+                    wysokoscNaglowka);
+
+            g.FillRectangle(
+                Brushes.WhiteSmoke,
+                rectDzienNaglowek);
+
+            g.DrawRectangle(
+                Pens.Black,
+                rectDzienNaglowek.X,
+                rectDzienNaglowek.Y,
+                rectDzienNaglowek.Width,
+                rectDzienNaglowek.Height);
+
+            g.DrawString(
+                "dzień",
+                fontNaglowek,
+                Brushes.Black,
+                rectDzienNaglowek,
+                sfSrodek);
+
+            for (int b = 0;
+                 b < brygady.Length;
+                 b++)
+            {
+                RectangleF rectNaglowek =
+                    new RectangleF(
+                        x +
+                        szerokoscDnia +
+                        b *
+                        szerokoscBrygady,
+                        yNaglowka,
+                        szerokoscBrygady,
+                        wysokoscNaglowka);
+
+                g.FillRectangle(
+                    Brushes.WhiteSmoke,
+                    rectNaglowek);
+
+                g.DrawRectangle(
+                    Pens.Black,
+                    rectNaglowek.X,
+                    rectNaglowek.Y,
+                    rectNaglowek.Width,
+                    rectNaglowek.Height);
+
+                string nazwaBrygady =
+                    PobierzNazweBrygadyWidoku(
+                        b)
+                    .Replace(
+                        "Brygada ",
+                        "");
+
+                g.DrawString(
+                    nazwaBrygady,
+                    fontNaglowek,
+                    Brushes.Black,
+                    rectNaglowek,
+                    sfSrodek);
+            }
+
+
+            // -------------------------------------------------
+            // 31 WIERSZY - dzięki temu wszystkie 3 miesiące
+            // kończą się na tej samej wysokości.
+            // -------------------------------------------------
+
+            int dniWMiesiacu =
+                DateTime.DaysInMonth(
+                    miesiac.Year,
+                    miesiac.Month);
+
+            float yWierszy =
+                yNaglowka +
+                wysokoscNaglowka;
+
+            for (int numerWiersza = 1;
+                 numerWiersza <= 31;
+                 numerWiersza++)
+            {
+                float yWiersza =
+                    yWierszy +
+                    (numerWiersza - 1) *
+                    wysokoscWiersza;
+
+                bool istniejeDzien =
+                    numerWiersza <=
+                    dniWMiesiacu;
+
+                DateTime data =
+                    istniejeDzien
+                        ? new DateTime(
+                            miesiac.Year,
+                            miesiac.Month,
+                            numerWiersza)
+                        : DateTime.MinValue;
+
+
+                // ---------------------------------------------
+                // DZIEŃ + DZIEŃ TYGODNIA
+                // ---------------------------------------------
+
+                RectangleF rectDzien =
+                    new RectangleF(
+                        x,
+                        yWiersza,
+                        szerokoscDnia,
+                        wysokoscWiersza);
+
+                Brush tloDnia =
+                    Brushes.White;
+
+                Brush tekstDnia =
+                    Brushes.Black;
+
+                if (istniejeDzien)
+                {
+                    if (data.DayOfWeek ==
+                            DayOfWeek.Sunday ||
+                        CzySwieto(
+                            data))
+                    {
+                        tloDnia =
+                            Brushes.Red;
+
+                        tekstDnia =
+                            Brushes.White;
+                    }
+                    else if (data.DayOfWeek ==
+                        DayOfWeek.Saturday)
+                    {
+                        tloDnia =
+                            Brushes.Yellow;
+                    }
+                }
+
+                g.FillRectangle(
+                    tloDnia,
+                    rectDzien);
+
+                g.DrawRectangle(
+                    Pens.Black,
+                    rectDzien.X,
+                    rectDzien.Y,
+                    rectDzien.Width,
+                    rectDzien.Height);
+
+                if (istniejeDzien)
+                {
+                    string opisDnia =
+                        numerWiersza +
+                        "  " +
+                        PobierzSkrotDnia(
+                            data);
+
+                    g.DrawString(
+                        opisDnia,
+                        fontDzien,
+                        tekstDnia,
+                        rectDzien,
+                        sfSrodek);
+                }
+
+
+                // ---------------------------------------------
+                // BRYGADY
+                // ---------------------------------------------
+
+                for (int b = 0;
+                     b < brygady.Length;
+                     b++)
+                {
+                    RectangleF rectZmiana =
+                        new RectangleF(
+                            x +
+                            szerokoscDnia +
+                            b *
+                            szerokoscBrygady,
+                            yWiersza,
+                            szerokoscBrygady,
+                            wysokoscWiersza);
+
+                    Brush tloZmiany =
+                        Brushes.White;
+
+                    Brush tekstZmiany =
+                        Brushes.Black;
+
+                    string symbol =
+                        "";
+
+                    if (istniejeDzien)
+                    {
+                        char zmiana =
+                            ObliczZmiane(
+                                data,
+                                datyStartowe[b]);
+
+                        symbol =
+                            PobierzSymbolWidoku(
+                                zmiana);
+
+                        if (widokVeolia)
+                        {
+                            // Widok Prosty jest oszczędny:
+                            // zwykłe komórki pozostają białe.
+                            // Khaki wskazuje korektę wolnej niedzieli.
+                            if (CzyKorektaWolnejNiedzieli(
+                                data,
+                                datyStartowe[b]))
+                            {
+                                tloZmiany =
+                                    Brushes.Khaki;
+                            }
+                        }
+                        else
+                        {
+                            // Widok Standardowy zachowuje
+                            // kolory zmian znane z ekranu.
+                            switch (zmiana)
+                            {
+                                case 'N':
+                                    tloZmiany =
+                                        Brushes.LightSkyBlue;
+                                    break;
+
+                                case 'P':
+                                    tloZmiany =
+                                        Brushes.Orange;
+                                    break;
+
+                                case 'R':
+                                    tloZmiany =
+                                        Brushes.LightGreen;
+                                    break;
+
+                                case 'W':
+                                case 'X':
+                                    tloZmiany =
+                                        Brushes.WhiteSmoke;
+                                    break;
+                            }
+                        }
+
+                        // 31 grudnia - P/N jak praca świąteczna.
+                        if (CzyZmianaSwiatecznaWSylwestra(
+                            data,
+                            zmiana))
+                        {
+                            tloZmiany =
+                                Brushes.Red;
+
+                            tekstZmiany =
+                                Brushes.White;
+                        }
+                    }
+
+                    g.FillRectangle(
+                        tloZmiany,
+                        rectZmiana);
+
+                    g.DrawRectangle(
+                        Pens.Black,
+                        rectZmiana.X,
+                        rectZmiana.Y,
+                        rectZmiana.Width,
+                        rectZmiana.Height);
+
+                    if (istniejeDzien)
+                    {
+                        g.DrawString(
+                            symbol,
+                            fontKomorka,
+                            tekstZmiany,
+                            rectZmiana,
+                            sfSrodek);
+                    }
+                }
+            }
+        }
+
+
+        // =====================================================
+        // PODSUMOWANIE POD TRZEMA MIESIĄCAMI
+        // =====================================================
+
+        private void RysujPodsumowanieWydrukuKwartalnego(
+            Graphics g,
+            DateTime poczatek,
+            DateTime koniec,
+            float x,
+            float y,
+            float szerokosc,
+            float wysokosc,
+            Font fontOpis,
+            Font fontWartosc,
+            StringFormat sfSrodek,
+            StringFormat sfLewo)
+        {
+            int wymiar =
+                ObliczWymiarDniOkresuRozliczeniowego(
+                    poczatek,
+                    koniec);
+
+            int[] dniPracy =
+                new int[brygady.Length];
+
+            int[] dniDoDopracowania =
+                new int[brygady.Length];
+
+            for (int i = 0;
+                 i < brygady.Length;
+                 i++)
+            {
+                dniPracy[i] =
+                    ObliczDniPracyBrygadyWOkresie(
+                        i,
+                        poczatek,
+                        koniec);
+
+                dniDoDopracowania[i] =
+                    wymiar -
+                    dniPracy[i];
+            }
+
+
+            const int liczbaWierszy =
+                4;
+
+            float wysokoscWiersza =
+                wysokosc /
+                liczbaWierszy;
+
+            // Prawa część ma pięć małych pól na brygady.
+            float szerokoscPolaBrygady =
+                34.0F;
+
+            float szerokoscWartosci =
+                szerokoscPolaBrygady *
+                brygady.Length;
+
+            float szerokoscOpisu =
+                szerokosc -
+                szerokoscWartosci;
+
+
+            string[] opisy =
+            {
+                "Liczba dni roboczych w okresie rozliczeniowym (wymiar czasu pracy)",
+                "Liczba dni roboczych w harmonogramie dla poszczególnych brygad",
+                "Liczba dni do dopracowania do pełnego wymiaru czasu pracy",
+                "Okres rozliczeniowy"
+            };
+
+
+            for (int wiersz = 0;
+                 wiersz < liczbaWierszy;
+                 wiersz++)
+            {
+                float yWiersza =
+                    y +
+                    wiersz *
+                    wysokoscWiersza;
+
+                RectangleF rectOpis =
+                    new RectangleF(
+                        x,
+                        yWiersza,
+                        szerokoscOpisu,
+                        wysokoscWiersza);
+
+                g.FillRectangle(
+                    wiersz == 3
+                        ? Brushes.Gainsboro
+                        : Brushes.White,
+                    rectOpis);
+
+                g.DrawRectangle(
+                    Pens.Black,
+                    rectOpis.X,
+                    rectOpis.Y,
+                    rectOpis.Width,
+                    rectOpis.Height);
+
+                RectangleF rectTekstOpisu =
+                    new RectangleF(
+                        rectOpis.X + 4,
+                        rectOpis.Y,
+                        rectOpis.Width - 8,
+                        rectOpis.Height);
+
+                g.DrawString(
+                    opisy[wiersz],
+                    wiersz == 3
+                        ? fontWartosc
+                        : fontOpis,
+                    Brushes.Black,
+                    rectTekstOpisu,
+                    sfLewo);
+
+
+                // ---------------------------------------------
+                // WIERSZ 1 - wspólny wymiar
+                // ---------------------------------------------
+
+                if (wiersz == 0)
+                {
+                    RectangleF rectWymiar =
+                        new RectangleF(
+                            x +
+                            szerokoscOpisu,
+                            yWiersza,
+                            szerokoscWartosci,
+                            wysokoscWiersza);
+
+                    g.DrawRectangle(
+                        Pens.Black,
+                        rectWymiar.X,
+                        rectWymiar.Y,
+                        rectWymiar.Width,
+                        rectWymiar.Height);
+
+                    g.DrawString(
+                        wymiar.ToString(),
+                        fontWartosc,
+                        Brushes.Black,
+                        rectWymiar,
+                        sfSrodek);
+
+                    continue;
+                }
+
+
+                // ---------------------------------------------
+                // WIERSZ 4 - nazwa okresu
+                // ---------------------------------------------
+
+                if (wiersz == 3)
+                {
+                    RectangleF rectOkres =
+                        new RectangleF(
+                            x +
+                            szerokoscOpisu,
+                            yWiersza,
+                            szerokoscWartosci,
+                            wysokoscWiersza);
+
+                    g.FillRectangle(
+                        Brushes.Gainsboro,
+                        rectOkres);
+
+                    g.DrawRectangle(
+                        Pens.Black,
+                        rectOkres.X,
+                        rectOkres.Y,
+                        rectOkres.Width,
+                        rectOkres.Height);
+
+                    g.DrawString(
+                        PobierzNazweOkresuRozliczeniowego(
+                            poczatek),
+                        fontWartosc,
+                        Brushes.Black,
+                        rectOkres,
+                        sfSrodek);
+
+                    continue;
+                }
+
+
+                // ---------------------------------------------
+                // WIERSZE 2-3 - wartości dla pięciu brygad
+                // ---------------------------------------------
+
+                for (int i = 0;
+                     i < brygady.Length;
+                     i++)
+                {
+                    RectangleF rectWartosc =
+                        new RectangleF(
+                            x +
+                            szerokoscOpisu +
+                            i *
+                            szerokoscPolaBrygady,
+                            yWiersza,
+                            szerokoscPolaBrygady,
+                            wysokoscWiersza);
+
+                    g.DrawRectangle(
+                        Pens.Black,
+                        rectWartosc.X,
+                        rectWartosc.Y,
+                        rectWartosc.Width,
+                        rectWartosc.Height);
+
+                    int wartosc =
+                        wiersz == 1
+                            ? dniPracy[i]
+                            : dniDoDopracowania[i];
+
+                    g.DrawString(
+                        wartosc.ToString(),
+                        fontWartosc,
+                        Brushes.Black,
+                        rectWartosc,
+                        sfSrodek);
+                }
+            }
+        }
+
     }
 }
