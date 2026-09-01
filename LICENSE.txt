@@ -1,0 +1,37 @@
+Grafik Brygad VEOLIA Energia Łódź
+LICENCJA UŻYTKOWANIA
+
+Copyright © 2026 Marek Walaszczyk
+Wszelkie prawa zastrzeżone.
+
+1. Program „Grafik Brygad VEOLIA Energia Łódź” jest udostępniany bezpłatnie
+   do użytku osobistego.
+
+2. Autor zezwala na bezpłatne używanie programu w jego oryginalnej,
+   niezmodyfikowanej postaci.
+
+3. Bez uprzedniej zgody autora zabrania się:
+   a) modyfikowania, przerabiania lub tworzenia zmienionych wersji kodu
+      źródłowego programu;
+   b) rozpowszechniania kodu źródłowego lub zmodyfikowanych wersji programu;
+   c) publikowania programu lub jego kodu pod nazwiskiem innej osoby albo
+      przypisywania sobie autorstwa programu;
+   d) usuwania lub zmieniania informacji o autorze, prawach autorskich
+      i niniejszej licencji;
+   e) sprzedaży programu lub jego zmodyfikowanych wersji bez pisemnej zgody
+      autora.
+
+4. Dalsze udostępnianie oryginalnego programu w niezmienionej postaci wymaga
+   zgody autora.
+
+5. Program jest dostarczany bezpłatnie w stanie „takim, jaki jest”.
+   Autor nie udziela gwarancji jego przydatności do określonego celu i,
+   w zakresie dozwolonym przez obowiązujące prawo, nie ponosi odpowiedzialności
+   za szkody wynikające z jego używania.
+
+6. Wszelkie prawa, które nie zostały wyraźnie przyznane w niniejszej licencji,
+   pozostają zastrzeżone przez autora.
+
+Autor:
+Marek Walaszczyk
+© 2026 Marek Walaszczyk. Wszelkie prawa zastrzeżone.

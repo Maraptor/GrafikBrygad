@@ -8,6 +8,8 @@
         [STAThread]
         static void Main()
         {
+            // v1.20-beta.10
+            //
             // PerMonitorV2 jest ustawione w GrafikBrygad.csproj.
             // ApplicationConfiguration.Initialize() wykorzystuje
             // tę konfigurację przed utworzeniem pierwszego okna.

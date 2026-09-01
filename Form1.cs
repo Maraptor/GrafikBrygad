@@ -5,6 +5,7 @@ using System.Drawing.Printing;
 using System.Diagnostics;
 using System.IO;
 using System.Globalization;
+using System.Text.Json;
 using System.Windows.Forms;
 
 namespace GrafikBrygad
@@ -19,10 +20,15 @@ namespace GrafikBrygad
             "Grafik Brygad VEOLIA Energia Łódź";
 
         private const string WersjaProgramu =
-            "wersja 1.21";
+            "wersja 1.22";
 
         private const string AutorProgramu =
             "Marek Walaszczyk";
+
+        private const string NotaPrawna =
+            "© 2026 MAREK WALASZCZYK. Wszelkie prawa zastrzeżone. " +
+            "Program jest darmowy, ale zabrania się modyfikacji kodu " +
+            "oraz rozpowszechniania go bez zgody autora.";
 
         private const string RozpoczecieProjektu =
             "2026.08";
@@ -122,6 +128,9 @@ namespace GrafikBrygad
         private Button btnWidok =
             new Button();
 
+        private Button btnMojeZmiany =
+            new Button();
+
         private Button btnInfo =
             new Button();
 
@@ -188,6 +197,39 @@ namespace GrafikBrygad
                 new Dictionary<Control, BazowaCzcionka>();
 
         private bool ukladBazowyZapisany = false;
+
+
+        // =====================================================
+        // RĘCZNE KOREKTY GRAFIKU
+        // =====================================================
+        //
+        // Ręczne zmiany są zapisywane lokalnie w profilu
+        // użytkownika. Nie modyfikujemy 20-dniowego cyklu.
+        //
+        // Klucz: yyyyMMdd:indeksBrygady
+        // Wartość: R / P / N / U
+        //
+        // AUTO oznacza brak wpisu w tym słowniku.
+
+        private readonly Dictionary<string, char>
+            reczneKorekty =
+                new Dictionary<string, char>();
+
+
+        // =====================================================
+        // MOJA BRYGADA
+        // =====================================================
+        //
+        // Użytkownik pracuje w jednej, nadrzędnej brygadzie.
+        // Pozostałe brygady pozostają widoczne informacyjnie,
+        // ale ręczna edycja jest dostępna wyłącznie dla
+        // własnej brygady.
+
+        private int mojaBrygada =
+            0;
+
+        private bool czyWybranoMojaBrygade =
+            false;
 
 
         // =====================================================
@@ -286,6 +328,15 @@ namespace GrafikBrygad
 
             UtworzInterfejs();
 
+            // Ręczne korekty są przechowywane poza katalogiem
+            // instalacyjnym, dlatego aktualizacja programu ich
+            // nie usuwa.
+            WczytajReczneKorekty();
+
+            // Ustawienie „Moja brygada” jest przechowywane
+            // oddzielnie od ręcznych korekt.
+            WczytajUstawieniaUzytkownika();
+
             GenerujGrafik();
 
             // Zapamiętujemy układ dokładnie taki, jak został
@@ -306,6 +357,19 @@ namespace GrafikBrygad
                             {
                                 DopasujOknoDoObszaruRoboczego();
                                 UstawDzisiejszyDzienNaSrodku();
+
+                                // Przy pierwszym uruchomieniu
+                                // użytkownik wskazuje swoją brygadę.
+                                if (!czyWybranoMojaBrygade)
+                                {
+                                    if (PokazWyborMojejBrygady(
+                                        this,
+                                        true))
+                                    {
+                                        GenerujGrafik();
+                                        UstawDzisiejszyDzienNaSrodku();
+                                    }
+                                }
                             }));
                 };
 
@@ -1013,9 +1077,9 @@ namespace GrafikBrygad
                 "WIDOK PROSTY";
 
             btnWidok.Location =
-                new Point(115, 748);
+                new Point(45, 748);
 
-            btnWidok.Width = 190;
+            btnWidok.Width = 180;
             btnWidok.Height = 42;
 
             btnWidok.Font =
@@ -1033,6 +1097,33 @@ namespace GrafikBrygad
 
 
             // -------------------------------------------------
+            // MOJE ZMIANY - SZYBKA LISTA RĘCZNYCH KOREKT
+            // -------------------------------------------------
+
+            btnMojeZmiany.Text =
+                "MOJE ZMIANY";
+
+            btnMojeZmiany.Location =
+                new Point(235, 748);
+
+            btnMojeZmiany.Width = 180;
+            btnMojeZmiany.Height = 42;
+
+            btnMojeZmiany.Font =
+                new Font(
+                    "Segoe UI",
+                    10,
+                    FontStyle.Bold);
+
+            StylizujPrzycisk(
+                btnMojeZmiany,
+                false);
+
+            btnMojeZmiany.Click +=
+                BtnMojeZmiany_Click;
+
+
+            // -------------------------------------------------
             // PODGLĄD WYDRUKU - POD TABELĄ
             // -------------------------------------------------
 
@@ -1040,9 +1131,9 @@ namespace GrafikBrygad
                 "PODGLĄD WYDRUKU";
 
             btnPodglad.Location =
-                new Point(315, 748);
+                new Point(425, 748);
 
-            btnPodglad.Width = 190;
+            btnPodglad.Width = 180;
             btnPodglad.Height = 42;
 
             btnPodglad.Font =
@@ -1067,9 +1158,9 @@ namespace GrafikBrygad
                 "DRUKUJ A4";
 
             btnDrukuj.Location =
-                new Point(515, 748);
+                new Point(615, 748);
 
-            btnDrukuj.Width = 190;
+            btnDrukuj.Width = 180;
             btnDrukuj.Height = 42;
 
             btnDrukuj.Font =
@@ -1094,9 +1185,9 @@ namespace GrafikBrygad
                 "INFO";
 
             btnInfo.Location =
-                new Point(715, 748);
+                new Point(805, 748);
 
-            btnInfo.Width = 190;
+            btnInfo.Width = 180;
             btnInfo.Height = 42;
 
             btnInfo.Font =
@@ -1234,8 +1325,8 @@ namespace GrafikBrygad
             tabela.CellPainting +=
                 Tabela_CellPainting;
 
-            // Kliknięcie numeru dnia lub dnia tygodnia
-            // otwiera okno ze szczegółami dnia.
+            // Kliknięcie dowolnego pola w wierszu dnia
+            // otwiera okno ze szczegółami tego dnia.
             tabela.CellClick +=
                 Tabela_CellClick;
 
@@ -1257,10 +1348,7 @@ namespace GrafikBrygad
             // -------------------------------------------------
 
             lblAutor.Text =
-                "Autor programu: " +
-                AutorProgramu +
-                "  •  projekt od: " +
-                RozpoczecieProjektu;
+                NotaPrawna;
 
             lblAutor.Location =
                 new Point(24, 862);
@@ -1274,8 +1362,8 @@ namespace GrafikBrygad
             lblAutor.Font =
                 new Font(
                     "Segoe UI",
-                    10.5f,
-                    FontStyle.Italic);
+                    8.3f,
+                    FontStyle.Regular);
 
             lblAutor.ForeColor =
                 Color.FromArgb(
@@ -1376,6 +1464,9 @@ namespace GrafikBrygad
 
             this.Controls.Add(
                 btnWidok);
+
+            this.Controls.Add(
+                btnMojeZmiany);
 
             this.Controls.Add(
                 btnPodglad);
@@ -1925,6 +2016,796 @@ namespace GrafikBrygad
 
 
         // =====================================================
+        // MOJE ZMIANY - LISTA AKTYWNYCH RĘCZNYCH KOREKT
+        // =====================================================
+
+        private void BtnMojeZmiany_Click(
+            object? sender,
+            EventArgs e)
+        {
+            if (!czyWybranoMojaBrygade)
+            {
+                if (!PokazWyborMojejBrygady(
+                    this,
+                    true))
+                {
+                    return;
+                }
+
+                GenerujGrafik();
+            }
+
+            using Form okno =
+                new Form();
+
+            okno.AutoScaleMode =
+                AutoScaleMode.None;
+
+            okno.Text =
+                "Moje zmiany - Grafik Brygad";
+
+            okno.StartPosition =
+                FormStartPosition.CenterParent;
+
+            okno.FormBorderStyle =
+                FormBorderStyle.FixedDialog;
+
+            okno.MaximizeBox =
+                false;
+
+            okno.MinimizeBox =
+                false;
+
+            okno.ShowInTaskbar =
+                false;
+
+            okno.ClientSize =
+                new Size(
+                    820,
+                    570);
+
+            DateTime? dataDoPokazania =
+                null;
+
+
+            Label lblTytul =
+                new Label();
+
+            lblTytul.Text =
+                "MOJE ZMIANY — BRYGADA " +
+                PobierzKrotkaNazweBrygadyWidoku(
+                    mojaBrygada);
+
+            lblTytul.Location =
+                new Point(
+                    28,
+                    18);
+
+            lblTytul.Size =
+                new Size(
+                    764,
+                    38);
+
+            lblTytul.TextAlign =
+                ContentAlignment.MiddleCenter;
+
+            lblTytul.Font =
+                new Font(
+                    "Segoe UI",
+                    15F,
+                    FontStyle.Bold);
+
+            lblTytul.ForeColor =
+                Color.FromArgb(
+                    31,
+                    38,
+                    47);
+
+
+            Label lblOpis =
+                new Label();
+
+            lblOpis.Text =
+                "Aktywne ręczne korekty. Dwuklik na wpisie lub przycisk POKAŻ DZIEŃ " +
+                "przenosi bezpośrednio do Szczegółów dnia.";
+
+            lblOpis.Location =
+                new Point(
+                    34,
+                    58);
+
+            lblOpis.Size =
+                new Size(
+                    752,
+                    38);
+
+            lblOpis.TextAlign =
+                ContentAlignment.MiddleCenter;
+
+            lblOpis.Font =
+                new Font(
+                    "Segoe UI",
+                    9.5F,
+                    FontStyle.Regular);
+
+            lblOpis.ForeColor =
+                Color.DimGray;
+
+
+            Label lblZakres =
+                new Label();
+
+            lblZakres.Text =
+                "Zakres:";
+
+            lblZakres.Location =
+                new Point(
+                    28,
+                    106);
+
+            lblZakres.Size =
+                new Size(
+                    70,
+                    30);
+
+            lblZakres.TextAlign =
+                ContentAlignment.MiddleLeft;
+
+            lblZakres.Font =
+                new Font(
+                    "Segoe UI",
+                    9.5F,
+                    FontStyle.Bold);
+
+
+            ComboBox cmbZakres =
+                new ComboBox();
+
+            cmbZakres.Location =
+                new Point(
+                    100,
+                    108);
+
+            cmbZakres.Size =
+                new Size(
+                    220,
+                    30);
+
+            cmbZakres.DropDownStyle =
+                ComboBoxStyle.DropDownList;
+
+            cmbZakres.Font =
+                new Font(
+                    "Segoe UI",
+                    9.5F,
+                    FontStyle.Regular);
+
+            cmbZakres.Items.AddRange(
+                new object[]
+                {
+                    "WSZYSTKIE",
+                    "BIEŻĄCY ROK",
+                    "BIEŻĄCY KWARTAŁ"
+                });
+
+            cmbZakres.SelectedIndex =
+                0;
+
+
+            Label lblLicznik =
+                new Label();
+
+            lblLicznik.Location =
+                new Point(
+                    342,
+                    106);
+
+            lblLicznik.Size =
+                new Size(
+                    450,
+                    30);
+
+            lblLicznik.TextAlign =
+                ContentAlignment.MiddleRight;
+
+            lblLicznik.Font =
+                new Font(
+                    "Segoe UI",
+                    9.5F,
+                    FontStyle.Bold);
+
+            lblLicznik.ForeColor =
+                Color.FromArgb(
+                    55,
+                    63,
+                    72);
+
+
+            DataGridView lista =
+                new DataGridView();
+
+            lista.Location =
+                new Point(
+                    28,
+                    148);
+
+            lista.Size =
+                new Size(
+                    764,
+                    310);
+
+            lista.AllowUserToAddRows =
+                false;
+
+            lista.AllowUserToDeleteRows =
+                false;
+
+            lista.AllowUserToResizeRows =
+                false;
+
+            lista.AllowUserToResizeColumns =
+                false;
+
+            lista.ReadOnly =
+                true;
+
+            lista.RowHeadersVisible =
+                false;
+
+            lista.MultiSelect =
+                false;
+
+            lista.SelectionMode =
+                DataGridViewSelectionMode.FullRowSelect;
+
+            lista.AutoSizeColumnsMode =
+                DataGridViewAutoSizeColumnsMode.Fill;
+
+            lista.BackgroundColor =
+                Color.White;
+
+            lista.BorderStyle =
+                BorderStyle.FixedSingle;
+
+            lista.CellBorderStyle =
+                DataGridViewCellBorderStyle.Single;
+
+            lista.GridColor =
+                Color.FromArgb(
+                    190,
+                    197,
+                    205);
+
+            lista.EnableHeadersVisualStyles =
+                false;
+
+            lista.ColumnHeadersHeight =
+                40;
+
+            lista.ColumnHeadersDefaultCellStyle.BackColor =
+                Color.FromArgb(
+                    232,
+                    236,
+                    241);
+
+            lista.ColumnHeadersDefaultCellStyle.ForeColor =
+                Color.FromArgb(
+                    28,
+                    34,
+                    42);
+
+            lista.ColumnHeadersDefaultCellStyle.Alignment =
+                DataGridViewContentAlignment.MiddleCenter;
+
+            lista.ColumnHeadersDefaultCellStyle.Font =
+                new Font(
+                    "Segoe UI",
+                    10F,
+                    FontStyle.Bold);
+
+            lista.DefaultCellStyle.Alignment =
+                DataGridViewContentAlignment.MiddleCenter;
+
+            lista.DefaultCellStyle.Font =
+                new Font(
+                    "Segoe UI",
+                    10F,
+                    FontStyle.Regular);
+
+            lista.DefaultCellStyle.SelectionBackColor =
+                Color.FromArgb(
+                    214,
+                    232,
+                    255);
+
+            lista.DefaultCellStyle.SelectionForeColor =
+                Color.Black;
+
+            lista.RowTemplate.Height =
+                38;
+
+            lista.Columns.Add(
+                "Data",
+                "DATA");
+
+            lista.Columns.Add(
+                "Dzien",
+                "DZIEŃ");
+
+            lista.Columns.Add(
+                "Bazowa",
+                "GRAFIK BAZOWY");
+
+            lista.Columns.Add(
+                "Zmiana",
+                "ZMIANA");
+
+            lista.Columns[0].FillWeight =
+                22F;
+
+            lista.Columns[1].FillWeight =
+                25F;
+
+            lista.Columns[2].FillWeight =
+                28F;
+
+            lista.Columns[3].FillWeight =
+                25F;
+
+            // Kolejność w oknie „Moje zmiany” jest zawsze
+            // chronologiczna. Kliknięcie nagłówka kolumny
+            // nie może zmieniać kolejności wpisów.
+            foreach (
+                DataGridViewColumn kolumna
+                in lista.Columns)
+            {
+                kolumna.SortMode =
+                    DataGridViewColumnSortMode.NotSortable;
+            }
+
+
+            Label lblBrak =
+                new Label();
+
+            lblBrak.Location =
+                new Point(
+                    28,
+                    462);
+
+            lblBrak.Size =
+                new Size(
+                    764,
+                    28);
+
+            lblBrak.TextAlign =
+                ContentAlignment.MiddleCenter;
+
+            lblBrak.Font =
+                new Font(
+                    "Segoe UI",
+                    9.2F,
+                    FontStyle.Italic);
+
+            lblBrak.ForeColor =
+                Color.DimGray;
+
+
+            Button btnPokaz =
+                new Button();
+
+            btnPokaz.Text =
+                "POKAŻ DZIEŃ";
+
+            btnPokaz.Location =
+                new Point(
+                    205,
+                    505);
+
+            btnPokaz.Size =
+                new Size(
+                    190,
+                    42);
+
+            btnPokaz.Font =
+                new Font(
+                    "Segoe UI",
+                    9.5F,
+                    FontStyle.Bold);
+
+            StylizujPrzycisk(
+                btnPokaz,
+                true);
+
+            btnPokaz.Enabled =
+                false;
+
+
+            Button btnZamknij =
+                new Button();
+
+            btnZamknij.Text =
+                "ZAMKNIJ";
+
+            btnZamknij.Location =
+                new Point(
+                    425,
+                    505);
+
+            btnZamknij.Size =
+                new Size(
+                    190,
+                    42);
+
+            btnZamknij.Font =
+                new Font(
+                    "Segoe UI",
+                    9.5F,
+                    FontStyle.Bold);
+
+            StylizujPrzycisk(
+                btnZamknij,
+                false);
+
+            btnZamknij.DialogResult =
+                DialogResult.Cancel;
+
+            okno.CancelButton =
+                btnZamknij;
+
+
+            void OdswiezListe()
+            {
+                lista.Rows.Clear();
+
+                int wszystkie =
+                    0;
+
+                int pokazane =
+                    0;
+
+                List<KeyValuePair<DateTime, char>> wpisy =
+                    new List<KeyValuePair<DateTime, char>>();
+
+                foreach (
+                    KeyValuePair<string, char> wpis
+                    in reczneKorekty)
+                {
+                    string[] czesci =
+                        wpis.Key.Split(':');
+
+                    if (czesci.Length != 2 ||
+                        !DateTime.TryParseExact(
+                            czesci[0],
+                            "yyyyMMdd",
+                            CultureInfo.InvariantCulture,
+                            DateTimeStyles.None,
+                            out DateTime data) ||
+                        !int.TryParse(
+                            czesci[1],
+                            NumberStyles.Integer,
+                            CultureInfo.InvariantCulture,
+                            out int indeksBrygady) ||
+                        indeksBrygady != mojaBrygada)
+                    {
+                        continue;
+                    }
+
+                    wszystkie++;
+
+                    bool pokaz =
+                        true;
+
+                    if (cmbZakres.SelectedIndex == 1)
+                    {
+                        pokaz =
+                            data.Year == DateTime.Today.Year;
+                    }
+                    else if (cmbZakres.SelectedIndex == 2)
+                    {
+                        DateTime poczatekKwartału =
+                            PobierzPoczatekOkresuRozliczeniowego(
+                                DateTime.Today);
+
+                        DateTime koniecKwartału =
+                            PobierzKoniecOkresuRozliczeniowego(
+                                DateTime.Today);
+
+                        pokaz =
+                            data.Date >= poczatekKwartału.Date &&
+                            data.Date <= koniecKwartału.Date;
+                    }
+
+                    if (pokaz)
+                    {
+                        wpisy.Add(
+                            new KeyValuePair<DateTime, char>(
+                                data.Date,
+                                wpis.Value));
+                    }
+                }
+
+                wpisy.Sort(
+                    (a, b) =>
+                        a.Key.CompareTo(
+                            b.Key));
+
+                CultureInfo polska =
+                    CultureInfo.GetCultureInfo(
+                        "pl-PL");
+
+                foreach (
+                    KeyValuePair<DateTime, char> wpis
+                    in wpisy)
+                {
+                    DateTime data =
+                        wpis.Key;
+
+                    char korekta =
+                        wpis.Value;
+
+                    char bazowa =
+                        ObliczZmiane(
+                            data,
+                            datyStartowe[mojaBrygada]);
+
+                    string dzienTygodnia =
+                        data.ToString(
+                            "dddd",
+                            polska);
+
+                    if (!string.IsNullOrEmpty(
+                        dzienTygodnia))
+                    {
+                        dzienTygodnia =
+                            char.ToUpper(
+                                dzienTygodnia[0],
+                                polska) +
+                            dzienTygodnia.Substring(1);
+                    }
+
+                    int indeksWiersza =
+                        lista.Rows.Add(
+                            data.ToString(
+                                "dd.MM.yyyy",
+                                CultureInfo.InvariantCulture),
+                            dzienTygodnia,
+                            PobierzPelnaNazweZmiany(
+                                bazowa),
+                            PobierzPelnaNazweZmiany(
+                                korekta));
+
+                    DataGridViewRow wiersz =
+                        lista.Rows[indeksWiersza];
+
+                    wiersz.Tag =
+                        data;
+
+                    wiersz.Cells[3].Style.BackColor =
+                        PobierzKolorZmiany(
+                            korekta);
+
+                    wiersz.Cells[3].Style.Font =
+                        new Font(
+                            "Segoe UI",
+                            10F,
+                            FontStyle.Bold);
+
+                    pokazane++;
+                }
+
+                lblLicznik.Text =
+                    "Pokazane: " +
+                    pokazane +
+                    "   •   Wszystkie aktywne: " +
+                    wszystkie;
+
+                lblBrak.Text =
+                    pokazane == 0
+                        ? "Brak ręcznych zmian w wybranym zakresie."
+                        : "AUTO usuwa korektę z tej listy i przywraca grafik bazowy.";
+
+                if (lista.Rows.Count > 0)
+                {
+                    lista.Rows[0].Selected =
+                        true;
+
+                    lista.CurrentCell =
+                        lista.Rows[0].Cells[0];
+
+                    btnPokaz.Enabled =
+                        true;
+                }
+                else
+                {
+                    btnPokaz.Enabled =
+                        false;
+                }
+            }
+
+
+            void WybierzDzienIZamknij()
+            {
+                if (lista.CurrentRow == null ||
+                    lista.CurrentRow.Tag is not DateTime data)
+                {
+                    return;
+                }
+
+                dataDoPokazania =
+                    data;
+
+                okno.DialogResult =
+                    DialogResult.OK;
+
+                okno.Close();
+            }
+
+
+            cmbZakres.SelectedIndexChanged +=
+                (sender, e) =>
+                {
+                    OdswiezListe();
+                };
+
+            lista.SelectionChanged +=
+                (sender, e) =>
+                {
+                    btnPokaz.Enabled =
+                        lista.CurrentRow != null;
+                };
+
+            lista.CellDoubleClick +=
+                (sender, e) =>
+                {
+                    if (e.RowIndex >= 0)
+                    {
+                        WybierzDzienIZamknij();
+                    }
+                };
+
+            btnPokaz.Click +=
+                (sender, e) =>
+                {
+                    WybierzDzienIZamknij();
+                };
+
+
+            okno.Controls.Add(
+                lblTytul);
+
+            okno.Controls.Add(
+                lblOpis);
+
+            okno.Controls.Add(
+                lblZakres);
+
+            okno.Controls.Add(
+                cmbZakres);
+
+            okno.Controls.Add(
+                lblLicznik);
+
+            okno.Controls.Add(
+                lista);
+
+            okno.Controls.Add(
+                lblBrak);
+
+            okno.Controls.Add(
+                btnPokaz);
+
+            okno.Controls.Add(
+                btnZamknij);
+
+            OdswiezListe();
+
+            DopasujOknoPomocniczeDoSkaliGlownego(
+                okno,
+                new Size(
+                    820,
+                    570));
+
+            okno.ShowDialog(
+                this);
+
+            if (dataDoPokazania.HasValue)
+            {
+                PrzejdzDoDnia(
+                    dataDoPokazania.Value);
+            }
+        }
+
+
+        // =====================================================
+        // PRZEJŚCIE DO KONKRETNEGO DNIA Z LISTY KOREKT
+        // =====================================================
+
+        private void PrzejdzDoDnia(
+            DateTime data)
+        {
+            aktualnyMiesiac =
+                new DateTime(
+                    data.Year,
+                    data.Month,
+                    1);
+
+            GenerujGrafik();
+
+            UstawDzienNaSrodku(
+                data);
+
+            PokazSzczegolyDnia(
+                data);
+
+            GenerujGrafik();
+
+            UstawDzienNaSrodku(
+                data);
+
+            tabela.ClearSelection();
+            tabela.CurrentCell = null;
+        }
+
+
+        // =====================================================
+        // USTAWIENIE WYBRANEGO DNIA NA ŚRODKU TABELI
+        // =====================================================
+
+        private void UstawDzienNaSrodku(
+            DateTime data)
+        {
+            if (data.Year != aktualnyMiesiac.Year ||
+                data.Month != aktualnyMiesiac.Month ||
+                tabela.Rows.Count == 0)
+            {
+                return;
+            }
+
+            int indeksWiersza =
+                data.Day - 1;
+
+            if (indeksWiersza < 0 ||
+                indeksWiersza >= tabela.Rows.Count)
+            {
+                return;
+            }
+
+            int widoczneWiersze =
+                Math.Min(
+                    LiczbaWidocznychDni,
+                    tabela.Rows.Count);
+
+            int pierwszyWiersz =
+                indeksWiersza -
+                widoczneWiersze / 2;
+
+            int maksymalnyPierwszy =
+                Math.Max(
+                    0,
+                    tabela.Rows.Count -
+                    widoczneWiersze);
+
+            pierwszyWiersz =
+                Math.Max(
+                    0,
+                    Math.Min(
+                        pierwszyWiersz,
+                        maksymalnyPierwszy));
+
+            try
+            {
+                tabela.FirstDisplayedScrollingRowIndex =
+                    pierwszyWiersz;
+            }
+            catch
+            {
+                // Jeżeli Windows chwilowo nie pozwoli przewinąć
+                // tabeli, sam dzień nadal zostanie poprawnie otwarty.
+            }
+        }
+
+
+        // =====================================================
         // INFO - KRÓTKA INSTRUKCJA UŻYTKOWANIA
         // =====================================================
 
@@ -1959,7 +2840,7 @@ namespace GrafikBrygad
             okno.ClientSize =
                 new Size(
                     760,
-                    610);
+                    730);
 
             Label lblTytulInfo =
                 new Label();
@@ -2004,7 +2885,7 @@ namespace GrafikBrygad
             lblInstrukcja.Size =
                 new Size(
                     676,
-                    420);
+                    430);
 
             lblInstrukcja.Font =
                 new Font(
@@ -2019,8 +2900,17 @@ namespace GrafikBrygad
                     47);
 
             lblInstrukcja.Text =
-                "• DZIEŃ / TYDZ.\n" +
-                "  Kliknij numer dnia lub skrót dnia tygodnia, aby otworzyć okno „Szczegóły dnia”.\n\n" +
+                "• SZCZEGÓŁY DNIA\n" +
+                "  Kliknij dowolne pole w całym wierszu dnia — datę, dzień tygodnia albo zmianę dowolnej brygady — " +
+                "aby otworzyć okno „Szczegóły dnia”. " +
+                "Brygady i zmiany są tam pokazane w skróconej, czytelnej formie. " +
+                "AUTO / R / P / N / U można edytować wyłącznie dla własnej brygady. " +
+                "Ręczne korekty są zapisywane lokalnie i pozostają po ponownym uruchomieniu programu. " +
+                "AUTO usuwa korektę i przywraca grafik bazowy.\n\n" +
+
+                "• MOJE ZMIANY\n" +
+                "  Pokazuje wszystkie aktywne ręczne korekty Mojej brygady. Można je filtrować, a dwuklik lub POKAŻ DZIEŃ " +
+                "przenosi bezpośrednio do właściwego dnia w grafiku.\n\n" +
 
                 "• NAGŁÓWEK BRYGADY\n" +
                 "  Kliknij nagłówek Brygada A-E (lub I-V w Widoku Prostym), aby otworzyć kwartalny okres rozliczeniowy.\n\n" +
@@ -2034,10 +2924,90 @@ namespace GrafikBrygad
 
                 "• PODGLĄD WYDRUKU / DRUKUJ A4\n" +
                 "  Drukowany jest cały kwartał zawierający aktualnie wyświetlany miesiąc. " +
-                "Na jednej stronie A4 poziomo znajdują się trzy miesiące oraz podsumowanie okresu rozliczeniowego.\n\n" +
+                "Na jednej stronie A4 poziomo znajdują się trzy miesiące oraz podsumowanie okresu rozliczeniowego. " +
+                "Wydruk pokazuje ręczne korekty Mojej brygady oraz skorygowaną liczbę dni do dopracowania.\n\n" +
 
                 "• KOLORY DNI\n" +
                 "  Sobota jest oznaczona kolorem żółtym, a niedziela i święto kolorem czerwonym.";
+
+
+            Label lblMojaBrygadaInfo =
+                new Label();
+
+            lblMojaBrygadaInfo.Location =
+                new Point(
+                    42,
+                    532);
+
+            lblMojaBrygadaInfo.Size =
+                new Size(
+                    350,
+                    38);
+
+            lblMojaBrygadaInfo.TextAlign =
+                ContentAlignment.MiddleLeft;
+
+            lblMojaBrygadaInfo.Font =
+                new Font(
+                    "Segoe UI",
+                    10.5F,
+                    FontStyle.Bold);
+
+            lblMojaBrygadaInfo.ForeColor =
+                Color.FromArgb(
+                    31,
+                    38,
+                    47);
+
+            lblMojaBrygadaInfo.Text =
+                czyWybranoMojaBrygade
+                    ? "Moja brygada: " +
+                      PobierzKrotkaNazweBrygadyWidoku(
+                          mojaBrygada)
+                    : "Moja brygada: nie wybrano";
+
+
+            Button btnZmienMojaBrygade =
+                new Button();
+
+            btnZmienMojaBrygade.Text =
+                "ZMIEŃ MOJĄ BRYGADĘ";
+
+            btnZmienMojaBrygade.Location =
+                new Point(
+                    458,
+                    532);
+
+            btnZmienMojaBrygade.Size =
+                new Size(
+                    260,
+                    38);
+
+            btnZmienMojaBrygade.Font =
+                new Font(
+                    "Segoe UI",
+                    9.2F,
+                    FontStyle.Bold);
+
+            StylizujPrzycisk(
+                btnZmienMojaBrygade,
+                false);
+
+            btnZmienMojaBrygade.Click +=
+                (sender, e) =>
+                {
+                    if (PokazWyborMojejBrygady(
+                        okno,
+                        false))
+                    {
+                        lblMojaBrygadaInfo.Text =
+                            "Moja brygada: " +
+                            PobierzKrotkaNazweBrygadyWidoku(
+                                mojaBrygada);
+
+                        GenerujGrafik();
+                    }
+                };
 
 
             Label lblStopkaInfo =
@@ -2046,12 +3016,12 @@ namespace GrafikBrygad
             lblStopkaInfo.Location =
                 new Point(
                     42,
-                    510);
+                    598);
 
             lblStopkaInfo.Size =
                 new Size(
                     676,
-                    28);
+                    44);
 
             lblStopkaInfo.TextAlign =
                 ContentAlignment.MiddleCenter;
@@ -2059,14 +3029,14 @@ namespace GrafikBrygad
             lblStopkaInfo.Font =
                 new Font(
                     "Segoe UI",
-                    9F,
-                    FontStyle.Italic);
+                    8.5F,
+                    FontStyle.Regular);
 
             lblStopkaInfo.ForeColor =
                 Color.DimGray;
 
             lblStopkaInfo.Text =
-                $"{NazwaProgramu} • {WersjaProgramu} • {AutorProgramu}";
+                NotaPrawna;
 
 
             Button btnZamknijInfo =
@@ -2078,7 +3048,7 @@ namespace GrafikBrygad
             btnZamknijInfo.Location =
                 new Point(
                     285,
-                    552);
+                    652);
 
             btnZamknijInfo.Size =
                 new Size(
@@ -2108,6 +3078,12 @@ namespace GrafikBrygad
                 lblInstrukcja);
 
             okno.Controls.Add(
+                lblMojaBrygadaInfo);
+
+            okno.Controls.Add(
+                btnZmienMojaBrygade);
+
+            okno.Controls.Add(
                 lblStopkaInfo);
 
             okno.Controls.Add(
@@ -2117,7 +3093,7 @@ namespace GrafikBrygad
                 okno,
                 new Size(
                     760,
-                    610));
+                    730));
 
             okno.ShowDialog(
                 this);
@@ -2355,8 +3331,38 @@ namespace GrafikBrygad
 
                 tabela.Columns[i + 2]
                     .ToolTipText =
-                    "Kliknij, aby zobaczyć kwartalny " +
-                    "okres rozliczeniowy.";
+                    czyWybranoMojaBrygade &&
+                    i == mojaBrygada
+                        ? "MOJA BRYGADA — kliknij, aby zobaczyć " +
+                          "kwartalny okres rozliczeniowy."
+                        : "Kliknij, aby zobaczyć kwartalny " +
+                          "okres rozliczeniowy.";
+
+                if (czyWybranoMojaBrygade &&
+                    i == mojaBrygada)
+                {
+                    tabela.Columns[i + 2]
+                        .HeaderCell.Style.BackColor =
+                        Color.Khaki;
+
+                    tabela.Columns[i + 2]
+                        .HeaderCell.Style.SelectionBackColor =
+                        Color.Khaki;
+
+                    tabela.Columns[i + 2]
+                        .HeaderCell.Style.ForeColor =
+                        Color.FromArgb(
+                            25,
+                            31,
+                            39);
+
+                    tabela.Columns[i + 2]
+                        .HeaderCell.Style.Font =
+                        new Font(
+                            "Segoe UI",
+                            12,
+                            FontStyle.Bold);
+                }
             }
 
 
@@ -2421,9 +3427,9 @@ namespace GrafikBrygad
                      b++)
                 {
                     char zmiana =
-                        ObliczZmiane(
+                        PobierzZmianeDoWyswietlenia(
                             data,
-                            datyStartowe[b]);
+                            b);
 
                     DataGridViewCell komorkaZmiany =
                         tabela.Rows[numerWiersza]
@@ -2438,6 +3444,24 @@ namespace GrafikBrygad
                     komorkaZmiany.Tag =
                         zmiana;
 
+                    if (CzyRecznaKorekta(
+                        data,
+                        b))
+                    {
+                        char bazowa =
+                            ObliczZmiane(
+                                data,
+                                datyStartowe[b]);
+
+                        komorkaZmiany.ToolTipText =
+                            "Ręczna korekta: " +
+                            PobierzPelnaNazweZmiany(
+                                bazowa) +
+                            " → " +
+                            PobierzPelnaNazweZmiany(
+                                zmiana);
+                    }
+
                     if (CzyKorektaWolnejNiedzieli(
                         data,
                         datyStartowe[b]))
@@ -2447,13 +3471,25 @@ namespace GrafikBrygad
                                 data,
                                 datyStartowe[b]);
 
-                        komorkaZmiany.ToolTipText =
+                        if (!string.IsNullOrEmpty(
+                            komorkaZmiany.ToolTipText))
+                        {
+                            komorkaZmiany.ToolTipText +=
+                                Environment.NewLine;
+                        }
+
+                        char zmianaAutomatyczna =
+                            ObliczZmiane(
+                                data,
+                                datyStartowe[b]);
+
+                        komorkaZmiany.ToolTipText +=
                             "Korekta wolnej niedzieli: " +
                             PobierzPelnaNazweZmiany(
                                 podstawowa) +
                             " → " +
                             PobierzPelnaNazweZmiany(
-                                zmiana);
+                                zmianaAutomatyczna);
                     }
 
                     if (CzyZmianaSwiatecznaWSylwestra(
@@ -2763,7 +3799,9 @@ namespace GrafikBrygad
             }
 
             int indeksBrygady =
-                e.ColumnIndex - 2;
+                czyWybranoMojaBrygade
+                    ? mojaBrygada
+                    : e.ColumnIndex - 2;
 
             PokazOkresRozliczeniowy(
                 indeksBrygady);
@@ -2921,6 +3959,53 @@ namespace GrafikBrygad
 
             return
                 dniPracy;
+        }
+
+
+        // =====================================================
+        // DNI ZALICZONE DO WYMIARU PO RĘCZNYCH KOREKTACH
+        // =====================================================
+        //
+        // Do wymiaru zaliczamy:
+        // R / P / N / U
+        //
+        // W i X nie zwiększają liczby dni zaliczonych.
+        //
+        // Przykłady:
+        // R -> U  = nadal 1 dzień
+        // W -> R  = +1 dzień
+        // W -> P  = +1 dzień
+        // W -> N  = +1 dzień
+        // W -> U  = +1 dzień
+
+        private int ObliczDniZaliczonePoKorektach(
+            int indeksBrygady,
+            DateTime poczatek,
+            DateTime koniec)
+        {
+            int dniZaliczone =
+                0;
+
+            for (DateTime data = poczatek.Date;
+                 data <= koniec.Date;
+                 data = data.AddDays(1))
+            {
+                char zmiana =
+                    PobierzZmianeDoWyswietlenia(
+                        data,
+                        indeksBrygady);
+
+                if (zmiana == 'R' ||
+                    zmiana == 'P' ||
+                    zmiana == 'N' ||
+                    zmiana == 'U')
+                {
+                    dniZaliczone++;
+                }
+            }
+
+            return
+                dniZaliczone;
         }
 
 
@@ -3124,6 +4209,11 @@ namespace GrafikBrygad
             int[] dniDoDopracowania =
                 new int[brygady.Length];
 
+            // Pozostała liczba dni do dopracowania po
+            // uwzględnieniu ręcznych R / P / N / U.
+            int[] dniDoDopracowaniaPoKorekcie =
+                new int[brygady.Length];
+
             // -------------------------------------------------
             // ROCZNY WYMIAR I ROCZNE DNI DO DOPRACOWANIA
             // -------------------------------------------------
@@ -3171,6 +4261,21 @@ namespace GrafikBrygad
                     wymiar -
                     dniPracyBrygad[i];
 
+                int dniZaliczonePoKorekcie =
+                    ObliczDniZaliczonePoKorektach(
+                        i,
+                        poczatek,
+                        koniec);
+
+                // Nie pokazujemy wartości ujemnych.
+                // Nadwyżkę ponad wymiar możemy w przyszłości
+                // zaprezentować jako osobną informację.
+                dniDoDopracowaniaPoKorekcie[i] =
+                    Math.Max(
+                        0,
+                        wymiar -
+                        dniZaliczonePoKorekcie);
+
                 int dniPracyRocznie =
                     ObliczDniPracyBrygadyWOkresie(
                         i,
@@ -3190,9 +4295,13 @@ namespace GrafikBrygad
                 AutoScaleMode.None;
 
             okno.Text =
-                "Okres rozliczeniowy – " +
-                PobierzNazweBrygadyWidoku(
-                    zaznaczonaBrygada);
+                czyWybranoMojaBrygade
+                    ? "Okres rozliczeniowy – Moja brygada " +
+                      PobierzKrotkaNazweBrygadyWidoku(
+                          mojaBrygada)
+                    : "Okres rozliczeniowy – " +
+                      PobierzNazweBrygadyWidoku(
+                          zaznaczonaBrygada);
 
             okno.StartPosition =
                 FormStartPosition.CenterParent;
@@ -3212,7 +4321,7 @@ namespace GrafikBrygad
             okno.ClientSize =
                 new Size(
                     920,
-                    535);
+                    600);
 
             okno.BackColor =
                 Color.FromArgb(
@@ -3405,19 +4514,30 @@ namespace GrafikBrygad
             tabelaOkresu.Size =
                 new Size(
                     872,
-                    222);
+                    281);
 
             tabelaOkresu.BackColor =
                 Color.White;
 
+            // Jednolita siatka tabeli: bez dodatkowych marginesów
+            // i bez przesunięć pomiędzy komórkami.
+            tabelaOkresu.Margin =
+                Padding.Empty;
+
+            tabelaOkresu.Padding =
+                Padding.Empty;
+
             tabelaOkresu.CellBorderStyle =
                 TableLayoutPanelCellBorderStyle.Single;
+
+            tabelaOkresu.GrowStyle =
+                TableLayoutPanelGrowStyle.FixedSize;
 
             tabelaOkresu.ColumnCount =
                 6;
 
             tabelaOkresu.RowCount =
-                4;
+                5;
 
             tabelaOkresu.ColumnStyles.Add(
                 new ColumnStyle(
@@ -3454,6 +4574,11 @@ namespace GrafikBrygad
                     SizeType.Absolute,
                     59F));
 
+            tabelaOkresu.RowStyles.Add(
+                new RowStyle(
+                    SizeType.Absolute,
+                    59F));
+
             okno.Controls.Add(
                 tabelaOkresu);
 
@@ -3467,6 +4592,9 @@ namespace GrafikBrygad
 
             pustyNaglowek.Dock =
                 DockStyle.Fill;
+
+            pustyNaglowek.Margin =
+                Padding.Empty;
 
             pustyNaglowek.TextAlign =
                 ContentAlignment.MiddleCenter;
@@ -3499,7 +4627,11 @@ namespace GrafikBrygad
                     PobierzNazweBrygadyWidoku(i)
                     .Replace(
                         "Brygada ",
-                        "");
+                        "") +
+                    (czyWybranoMojaBrygade &&
+                     i == mojaBrygada
+                        ? " ★"
+                        : "");
 
                 naglowek.TextAlign =
                     ContentAlignment.MiddleCenter;
@@ -3610,6 +4742,51 @@ namespace GrafikBrygad
 
 
             // -------------------------------------------------
+            // OPIS: KOREKTA DNI DO DOPRACOWANIA
+            // -------------------------------------------------
+
+            Label lblOpisKorektyDopracowania =
+                new Label();
+
+            lblOpisKorektyDopracowania.Dock =
+                DockStyle.Fill;
+
+            lblOpisKorektyDopracowania.Margin =
+                Padding.Empty;
+
+            lblOpisKorektyDopracowania.Padding =
+                new Padding(
+                    12,
+                    0,
+                    8,
+                    0);
+
+            lblOpisKorektyDopracowania.Text =
+                "Liczba dni do dopracowania po uwzględnieniu " +
+                "ręcznych zmian i urlopu";
+
+            lblOpisKorektyDopracowania.TextAlign =
+                ContentAlignment.MiddleLeft;
+
+            lblOpisKorektyDopracowania.Font =
+                new Font(
+                    "Segoe UI",
+                    9.5F,
+                    FontStyle.Regular);
+
+            lblOpisKorektyDopracowania.BackColor =
+                Color.FromArgb(
+                    238,
+                    248,
+                    255);
+
+            tabelaOkresu.Controls.Add(
+                lblOpisKorektyDopracowania,
+                0,
+                3);
+
+
+            // -------------------------------------------------
             // OPIS: DNI DO DOPRACOWANIA W ROKU KALENDARZOWYM
             // -------------------------------------------------
 
@@ -3645,7 +4822,7 @@ namespace GrafikBrygad
             tabelaOkresu.Controls.Add(
                 lblOpisDopracowaniaRocznego,
                 0,
-                3);
+                4);
 
 
             // -------------------------------------------------
@@ -3729,6 +4906,44 @@ namespace GrafikBrygad
                     2);
 
 
+                Label lblKorektaDopracowania =
+                    new Label();
+
+                lblKorektaDopracowania.Dock =
+                    DockStyle.Fill;
+
+                lblKorektaDopracowania.Margin =
+                    Padding.Empty;
+
+                lblKorektaDopracowania.Text =
+                    dniDoDopracowaniaPoKorekcie[i]
+                    .ToString();
+
+                lblKorektaDopracowania.TextAlign =
+                    ContentAlignment.MiddleCenter;
+
+                lblKorektaDopracowania.Font =
+                    new Font(
+                        "Segoe UI",
+                        14F,
+                        i == zaznaczonaBrygada
+                            ? FontStyle.Bold
+                            : FontStyle.Regular);
+
+                lblKorektaDopracowania.BackColor =
+                    i == zaznaczonaBrygada
+                        ? Color.LightSkyBlue
+                        : Color.FromArgb(
+                            238,
+                            248,
+                            255);
+
+                tabelaOkresu.Controls.Add(
+                    lblKorektaDopracowania,
+                    i + 1,
+                    3);
+
+
                 Label lblDopracowanieRoczne =
                     new Label();
 
@@ -3764,7 +4979,7 @@ namespace GrafikBrygad
                 tabelaOkresu.Controls.Add(
                     lblDopracowanieRoczne,
                     i + 1,
-                    3);
+                    4);
             }
 
 
@@ -3778,7 +4993,7 @@ namespace GrafikBrygad
             lblInfo.Location =
                 new Point(
                     24,
-                    417);
+                    478);
 
             lblInfo.Size =
                 new Size(
@@ -3786,9 +5001,9 @@ namespace GrafikBrygad
                     42);
 
             lblInfo.Text =
-                "Do dni pracy brygady zaliczane są zmiany " +
-                "R / P / N.  W i X pozostają dniami wolnymi.  " +
-                "Wymiar uwzględnia święta oraz Dzień Energetyka.";
+                "★ oznacza Moją brygadę.  Trzy wartości bazowe pozostają liczone z harmonogramu.  " +
+                "Wiersz korekty uwzględnia ręczne R / P / N / U.  " +
+                "W i X nie zwiększają liczby dni zaliczonych do wymiaru.";
 
             lblInfo.TextAlign =
                 ContentAlignment.MiddleCenter;
@@ -3819,7 +5034,7 @@ namespace GrafikBrygad
             btnZamknij.Location =
                 new Point(
                     360,
-                    475);
+                    540);
 
             btnZamknij.Size =
                 new Size(
@@ -3854,7 +5069,7 @@ namespace GrafikBrygad
                 okno,
                 new Size(
                     920,
-                    535));
+                    600));
 
             okno.ShowDialog(
                 this);
@@ -3869,11 +5084,11 @@ namespace GrafikBrygad
             object? sender,
             DataGridViewCellEventArgs e)
         {
-            // Reagujemy tylko na kliknięcie w kolumnę DZIEŃ
-            // albo TYDZ. oraz pomijamy nagłówki tabeli.
+            // Cały wiersz dnia jest aktywny: DZIEŃ, TYDZ.
+            // oraz wszystkie pola brygad. Pomijamy tylko nagłówki.
             if (e.RowIndex < 0 ||
                 e.ColumnIndex < 0 ||
-                e.ColumnIndex > 1)
+                e.ColumnIndex >= tabela.Columns.Count)
             {
                 return;
             }
@@ -3898,6 +5113,11 @@ namespace GrafikBrygad
                     numerDnia);
 
             PokazSzczegolyDnia(data);
+
+            // Po zamknięciu szczegółów odświeżamy miesiąc,
+            // aby zapisane korekty były od razu widoczne
+            // w głównej tabeli.
+            GenerujGrafik();
 
             // Po zamknięciu szczegółów usuwamy systemowe
             // niebieskie zaznaczenie klikniętej komórki.
@@ -3938,8 +5158,12 @@ namespace GrafikBrygad
             okno.ShowInTaskbar =
                 false;
 
+            // Okno ma dodatkowe miejsce na sekcję
+            // ręcznej edycji własnej brygady.
             okno.ClientSize =
-                new Size(540, 500);
+                new Size(
+                    580,
+                    676);
 
             okno.BackColor =
                 Color.FromArgb(
@@ -3956,10 +5180,12 @@ namespace GrafikBrygad
                 new Label();
 
             lblData.Location =
-                new Point(20, 12);
+                new Point(
+                    20,
+                    12);
 
             lblData.Width =
-                500;
+                540;
 
             lblData.Height =
                 46;
@@ -3988,10 +5214,12 @@ namespace GrafikBrygad
                 new Label();
 
             lblSwieto.Location =
-                new Point(24, 62);
+                new Point(
+                    20,
+                    62);
 
             lblSwieto.Width =
-                492;
+                540;
 
             lblSwieto.Height =
                 46;
@@ -4005,8 +5233,11 @@ namespace GrafikBrygad
                     12,
                     FontStyle.Bold);
 
+            // Bez osobnego obramowania: prostokąt święta
+            // ma być czysty i symetryczny, bez podwójnej linii
+            // widocznej przy prawej krawędzi okna.
             lblSwieto.BorderStyle =
-                BorderStyle.FixedSingle;
+                BorderStyle.None;
 
             lblSwieto.BackColor =
                 Color.White;
@@ -4020,16 +5251,22 @@ namespace GrafikBrygad
                 new Label();
 
             lblZmiany.Location =
-                new Point(24, 114);
+                new Point(
+                    24,
+                    114);
 
             lblZmiany.Width =
-                492;
+                532;
 
             lblZmiany.Height =
                 34;
 
             lblZmiany.Text =
-                "Zmiany brygad";
+                czyWybranoMojaBrygade
+                    ? "Zmiany brygad   •   Moja brygada: " +
+                      PobierzKrotkaNazweBrygadyWidoku(
+                          mojaBrygada)
+                    : "Zmiany brygad";
 
             lblZmiany.TextAlign =
                 ContentAlignment.MiddleCenter;
@@ -4044,7 +5281,11 @@ namespace GrafikBrygad
                 false;
 
             lblZmiany.Padding =
-                new Padding(0, 0, 0, 2);
+                new Padding(
+                    0,
+                    0,
+                    0,
+                    2);
 
 
             // -------------------------------------------------
@@ -4055,10 +5296,12 @@ namespace GrafikBrygad
                 new Panel();
 
             panelZmiany.Location =
-                new Point(24, 150);
+                new Point(
+                    24,
+                    150);
 
             panelZmiany.Width =
-                492;
+                532;
 
             panelZmiany.Height =
                 210;
@@ -4070,8 +5313,14 @@ namespace GrafikBrygad
                 BorderStyle.FixedSingle;
 
 
+            Label[] etykietyBrygad =
+                new Label[brygady.Length];
+
             Label[] etykietyZmian =
                 new Label[brygady.Length];
+
+            ToolTip podpowiedzZmiany =
+                new ToolTip();
 
             int y = 10;
 
@@ -4083,25 +5332,27 @@ namespace GrafikBrygad
                     new Label();
 
                 lblBrygada.Location =
-                    new Point(16, y);
+                    new Point(
+                        18,
+                        y);
 
                 lblBrygada.Width =
-                    200;
+                    58;
 
                 lblBrygada.Height =
                     32;
 
                 lblBrygada.Text =
-                    PobierzNazweBrygadyWidoku(
+                    PobierzKrotkaNazweBrygadyWidoku(
                         b);
 
                 lblBrygada.TextAlign =
-                    ContentAlignment.MiddleLeft;
+                    ContentAlignment.MiddleCenter;
 
                 lblBrygada.Font =
                     new Font(
                         "Segoe UI",
-                        10,
+                        11,
                         FontStyle.Bold);
 
                 lblBrygada.ForeColor =
@@ -4115,10 +5366,12 @@ namespace GrafikBrygad
                     new Label();
 
                 lblZmiana.Location =
-                    new Point(240, y);
+                    new Point(
+                        92,
+                        y);
 
                 lblZmiana.Width =
-                    230;
+                    410;
 
                 lblZmiana.Height =
                     32;
@@ -4129,7 +5382,7 @@ namespace GrafikBrygad
                 lblZmiana.Font =
                     new Font(
                         "Segoe UI",
-                        10,
+                        13,
                         FontStyle.Bold);
 
                 lblZmiana.BorderStyle =
@@ -4141,8 +5394,27 @@ namespace GrafikBrygad
                         25,
                         30);
 
+                lblZmiana.Cursor =
+                    czyWybranoMojaBrygade &&
+                    b == mojaBrygada
+                        ? Cursors.Hand
+                        : Cursors.Default;
+
+                lblZmiana.Tag =
+                    b;
+
+                etykietyBrygad[b] =
+                    lblBrygada;
+
                 etykietyZmian[b] =
                     lblZmiana;
+
+                podpowiedzZmiany.SetToolTip(
+                    lblZmiana,
+                    czyWybranoMojaBrygade &&
+                    b == mojaBrygada
+                        ? "Moja brygada — kliknij, aby edytować."
+                        : "Podgląd. Edycja jest dostępna tylko dla Mojej brygady.");
 
                 panelZmiany.Controls.Add(
                     lblBrygada);
@@ -4152,6 +5424,313 @@ namespace GrafikBrygad
 
                 y += 39;
             }
+
+
+            // -------------------------------------------------
+            // SEKCJA TESTOWEJ EDYCJI
+            // -------------------------------------------------
+
+            // Standardowy GroupBox prowadzi ramkę przez tytuł.
+            // Zamiast niego stosujemy osobny nagłówek i Panel,
+            // dzięki czemu napis nie leży na linii obramowania.
+
+            Label lblTytulEdycji =
+                new Label();
+
+            lblTytulEdycji.Text =
+                "Edycja Mojej brygady";
+
+            lblTytulEdycji.Location =
+                new Point(
+                    32,
+                    368);
+
+            lblTytulEdycji.Size =
+                new Size(
+                    220,
+                    24);
+
+            lblTytulEdycji.TextAlign =
+                ContentAlignment.MiddleLeft;
+
+            lblTytulEdycji.Font =
+                new Font(
+                    "Segoe UI",
+                    10,
+                    FontStyle.Bold);
+
+            lblTytulEdycji.BackColor =
+                okno.BackColor;
+
+            lblTytulEdycji.ForeColor =
+                Color.FromArgb(
+                    28,
+                    34,
+                    42);
+
+
+            Panel grupaEdycji =
+                new Panel();
+
+            grupaEdycji.Location =
+                new Point(
+                    24,
+                    396);
+
+            grupaEdycji.Size =
+                new Size(
+                    532,
+                    158);
+
+            grupaEdycji.BackColor =
+                Color.White;
+
+            grupaEdycji.BorderStyle =
+                BorderStyle.FixedSingle;
+
+
+            Label lblWybranaBrygada =
+                new Label();
+
+            lblWybranaBrygada.Location =
+                new Point(
+                    18,
+                    14);
+
+            lblWybranaBrygada.Size =
+                new Size(
+                    190,
+                    28);
+
+            lblWybranaBrygada.TextAlign =
+                ContentAlignment.MiddleLeft;
+
+            lblWybranaBrygada.Font =
+                new Font(
+                    "Segoe UI",
+                    10,
+                    FontStyle.Bold);
+
+
+            Label lblZmianaBazowa =
+                new Label();
+
+            lblZmianaBazowa.Location =
+                new Point(
+                    210,
+                    14);
+
+            lblZmianaBazowa.Size =
+                new Size(
+                    300,
+                    28);
+
+            lblZmianaBazowa.TextAlign =
+                ContentAlignment.MiddleRight;
+
+            lblZmianaBazowa.Font =
+                new Font(
+                    "Segoe UI",
+                    10,
+                    FontStyle.Regular);
+
+
+            Button btnAuto =
+                new Button();
+
+            btnAuto.Text =
+                "AUTO";
+
+            btnAuto.Location =
+                new Point(
+                    64,
+                    50);
+
+            btnAuto.Size =
+                new Size(
+                    90,
+                    36);
+
+            btnAuto.Font =
+                new Font(
+                    "Segoe UI",
+                    9.5f,
+                    FontStyle.Bold);
+
+            StylizujPrzycisk(
+                btnAuto,
+                false);
+
+
+            Button btnR =
+                new Button();
+
+            btnR.Text =
+                "R";
+
+            btnR.Location =
+                new Point(
+                    162,
+                    50);
+
+            btnR.Size =
+                new Size(
+                    70,
+                    36);
+
+            btnR.Font =
+                new Font(
+                    "Segoe UI",
+                    10,
+                    FontStyle.Bold);
+
+            btnR.BackColor =
+                Color.LightGreen;
+
+            btnR.UseVisualStyleBackColor =
+                false;
+
+
+            Button btnP =
+                new Button();
+
+            btnP.Text =
+                "P";
+
+            btnP.Location =
+                new Point(
+                    240,
+                    50);
+
+            btnP.Size =
+                new Size(
+                    70,
+                    36);
+
+            btnP.Font =
+                new Font(
+                    "Segoe UI",
+                    10,
+                    FontStyle.Bold);
+
+            btnP.BackColor =
+                Color.Orange;
+
+            btnP.UseVisualStyleBackColor =
+                false;
+
+
+            Button btnN =
+                new Button();
+
+            btnN.Text =
+                "N";
+
+            btnN.Location =
+                new Point(
+                    318,
+                    50);
+
+            btnN.Size =
+                new Size(
+                    70,
+                    36);
+
+            btnN.Font =
+                new Font(
+                    "Segoe UI",
+                    10,
+                    FontStyle.Bold);
+
+            btnN.BackColor =
+                Color.LightSkyBlue;
+
+            btnN.UseVisualStyleBackColor =
+                false;
+
+
+            Button btnU =
+                new Button();
+
+            btnU.Text =
+                "U";
+
+            btnU.Location =
+                new Point(
+                    396,
+                    50);
+
+            btnU.Size =
+                new Size(
+                    70,
+                    36);
+
+            btnU.Font =
+                new Font(
+                    "Segoe UI",
+                    10,
+                    FontStyle.Bold);
+
+            // Jasny fiolet / lawenda dla urlopu.
+            btnU.BackColor =
+                Color.Lavender;
+
+            btnU.UseVisualStyleBackColor =
+                false;
+
+
+            Label lblTrybTestowy =
+                new Label();
+
+            lblTrybTestowy.Location =
+                new Point(
+                    18,
+                    100);
+
+            lblTrybTestowy.Size =
+                new Size(
+                    492,
+                    30);
+
+            lblTrybTestowy.TextAlign =
+                ContentAlignment.MiddleCenter;
+
+            lblTrybTestowy.Font =
+                new Font(
+                    "Segoe UI",
+                    8.5f,
+                    FontStyle.Italic);
+
+            lblTrybTestowy.ForeColor =
+                Color.DimGray;
+
+            lblTrybTestowy.Text =
+                "AUTO: obowiązuje grafik bazowy. Korekty są zapisywane lokalnie.";
+
+
+            grupaEdycji.Controls.Add(
+                lblWybranaBrygada);
+
+            grupaEdycji.Controls.Add(
+                lblZmianaBazowa);
+
+            grupaEdycji.Controls.Add(
+                btnAuto);
+
+            grupaEdycji.Controls.Add(
+                btnR);
+
+            grupaEdycji.Controls.Add(
+                btnP);
+
+            grupaEdycji.Controls.Add(
+                btnN);
+
+            grupaEdycji.Controls.Add(
+                btnU);
+
+            grupaEdycji.Controls.Add(
+                lblTrybTestowy);
 
 
             // -------------------------------------------------
@@ -4165,10 +5744,12 @@ namespace GrafikBrygad
                 "Poprzedni";
 
             btnPoprzedniDzien.Location =
-                new Point(24, 388);
+                new Point(
+                    24,
+                    568);
 
             btnPoprzedniDzien.Width =
-                145;
+                150;
 
             btnPoprzedniDzien.Height =
                 40;
@@ -4184,10 +5765,6 @@ namespace GrafikBrygad
                 false);
 
 
-            // -------------------------------------------------
-            // POWRÓT DO DZISIEJSZEGO DNIA
-            // -------------------------------------------------
-
             Button btnDzisiajDzien =
                 new Button();
 
@@ -4195,7 +5772,9 @@ namespace GrafikBrygad
                 "Dzisiaj";
 
             btnDzisiajDzien.Location =
-                new Point(195, 388);
+                new Point(
+                    215,
+                    568);
 
             btnDzisiajDzien.Width =
                 150;
@@ -4221,10 +5800,12 @@ namespace GrafikBrygad
                 "Następny";
 
             btnNastepnyDzien.Location =
-                new Point(371, 388);
+                new Point(
+                    406,
+                    568);
 
             btnNastepnyDzien.Width =
-                145;
+                150;
 
             btnNastepnyDzien.Height =
                 40;
@@ -4252,8 +5833,8 @@ namespace GrafikBrygad
 
             btnZamknijSzczegoly.Location =
                 new Point(
-                    195,
-                    446);
+                    215,
+                    624);
 
             btnZamknijSzczegoly.Width =
                 150;
@@ -4280,13 +5861,138 @@ namespace GrafikBrygad
 
 
             // -------------------------------------------------
-            // ODŚWIEŻANIE ZAWARTOŚCI OKNA
+            // RĘCZNE KOREKTY — ZAPISYWANE LOKALNIE
             // -------------------------------------------------
 
             DateTime aktualnaData =
                 data.Date;
 
+            int wybranaBrygada =
+                czyWybranoMojaBrygade
+                    ? mojaBrygada
+                    : 0;
+
+            char PobierzBazowaZmiane(
+                DateTime dzien,
+                int indeksBrygady)
+            {
+                return
+                    ObliczZmiane(
+                        dzien,
+                        datyStartowe[indeksBrygady]);
+            }
+
+            char PobierzZmianeDoPodgladu(
+                DateTime dzien,
+                int indeksBrygady)
+            {
+                return
+                    PobierzZmianeDoWyswietlenia(
+                        dzien,
+                        indeksBrygady);
+            }
+
+
             Action odswiezSzczegoly =
+                null!;
+
+            Action odswiezEdytor =
+                () =>
+                {
+                    char bazowa =
+                        PobierzBazowaZmiane(
+                            aktualnaData,
+                            wybranaBrygada);
+
+                    char podglad =
+                        PobierzZmianeDoPodgladu(
+                            aktualnaData,
+                            wybranaBrygada);
+
+                    lblWybranaBrygada.Text =
+                        "Moja brygada: " +
+                        PobierzKrotkaNazweBrygadyWidoku(
+                            wybranaBrygada);
+
+                    lblZmianaBazowa.Text =
+                        "Grafik bazowy: " +
+                        bazowa;
+
+                    for (int b = 0;
+                         b < brygady.Length;
+                         b++)
+                    {
+                        etykietyBrygad[b].BackColor =
+                            czyWybranoMojaBrygade &&
+                            b == mojaBrygada
+                                ? Color.Khaki
+                                : Color.Transparent;
+
+                        etykietyBrygad[b].ForeColor =
+                            Color.FromArgb(
+                                28,
+                                34,
+                                42);
+                    }
+
+                    // Edytować można wyłącznie własną brygadę.
+                    // X pozostaje chronionym dniem wolnym.
+                    bool moja =
+                        czyWybranoMojaBrygade &&
+                        wybranaBrygada == mojaBrygada;
+
+                    bool moznaEdytowac =
+                        moja &&
+                        bazowa != 'X';
+
+                    btnR.Enabled =
+                        moznaEdytowac;
+
+                    btnP.Enabled =
+                        moznaEdytowac;
+
+                    btnN.Enabled =
+                        moznaEdytowac;
+
+                    btnU.Enabled =
+                        moznaEdytowac;
+
+                    btnAuto.Enabled =
+                        moja;
+
+                    if (!moja)
+                    {
+                        lblTrybTestowy.Text =
+                            "Podgląd — edycja jest dostępna tylko dla Mojej brygady.";
+                    }
+                    else if (!moznaEdytowac)
+                    {
+                        lblTrybTestowy.Text =
+                            "X — chroniony dzień wolny. AUTO pozostawia grafik bazowy.";
+                    }
+                    else
+                    {
+                        if (CzyRecznaKorekta(
+                            aktualnaData,
+                            wybranaBrygada))
+                        {
+                            lblTrybTestowy.Text =
+                                "Zapisana korekta: " +
+                                bazowa +
+                                " → " +
+                                podglad +
+                                ". AUTO przywraca grafik bazowy.";
+                        }
+                        else
+                        {
+                            lblTrybTestowy.Text =
+                                "AUTO: obowiązuje grafik bazowy. Korekty są zapisywane lokalnie.";
+                        }
+                    }
+                };
+
+
+            odswiezSzczegoly =
                 () =>
                 {
                     lblData.Text =
@@ -4366,15 +6072,27 @@ namespace GrafikBrygad
                          b++)
                     {
                         char zmiana =
-                            ObliczZmiane(
+                            PobierzZmianeDoPodgladu(
                                 aktualnaData,
-                                datyStartowe[b]);
+                                b);
 
                         etykietyZmian[b].Text =
-                            PobierzPelnaNazweZmianyWidoku(
+                            PobierzSymbolWidoku(
                                 zmiana);
 
-                        if (CzyZmianaSwiatecznaWSylwestra(
+                        // U ma własny kolor również w Widoku Prostym.
+                        if (zmiana == 'U')
+                        {
+                            etykietyZmian[b].BackColor =
+                                Color.Lavender;
+
+                            etykietyZmian[b].ForeColor =
+                                Color.FromArgb(
+                                    20,
+                                    25,
+                                    30);
+                        }
+                        else if (CzyZmianaSwiatecznaWSylwestra(
                             aktualnaData,
                             zmiana))
                         {
@@ -4411,7 +6129,98 @@ namespace GrafikBrygad
                                     25,
                                     30);
                         }
+
+                        etykietyZmian[b].Font =
+                            new Font(
+                                "Segoe UI",
+                                13,
+                                CzyRecznaKorekta(
+                                    aktualnaData,
+                                    b)
+                                    ? FontStyle.Bold |
+                                      FontStyle.Underline
+                                    : FontStyle.Bold);
                     }
+
+                    odswiezEdytor();
+                };
+
+
+            // Kliknięcie kolorowego pola wybiera brygadę.
+            for (int b = 0;
+                 b < etykietyZmian.Length;
+                 b++)
+            {
+                int indeksBrygady =
+                    b;
+
+                etykietyZmian[b].Click +=
+                    (sender, e) =>
+                    {
+                        if (!czyWybranoMojaBrygade ||
+                            indeksBrygady != mojaBrygada)
+                        {
+                            return;
+                        }
+
+                        wybranaBrygada =
+                            mojaBrygada;
+
+                        odswiezEdytor();
+                    };
+            }
+
+
+            void UstawZmianeIZapisz(
+                char nowaZmiana)
+            {
+                if (UstawRecznaKorekte(
+                    aktualnaData,
+                    wybranaBrygada,
+                    nowaZmiana))
+                {
+                    odswiezSzczegoly();
+                }
+            }
+
+
+            btnAuto.Click +=
+                (sender, e) =>
+                {
+                    if (UsunRecznaKorekte(
+                        aktualnaData,
+                        wybranaBrygada))
+                    {
+                        odswiezSzczegoly();
+                    }
+                };
+
+            btnR.Click +=
+                (sender, e) =>
+                {
+                    UstawZmianeIZapisz(
+                        'R');
+                };
+
+            btnP.Click +=
+                (sender, e) =>
+                {
+                    UstawZmianeIZapisz(
+                        'P');
+                };
+
+            btnN.Click +=
+                (sender, e) =>
+                {
+                    UstawZmianeIZapisz(
+                        'N');
+                };
+
+            btnU.Click +=
+                (sender, e) =>
+                {
+                    UstawZmianeIZapisz(
+                        'U');
                 };
 
 
@@ -4460,6 +6269,12 @@ namespace GrafikBrygad
                 panelZmiany);
 
             okno.Controls.Add(
+                lblTytulEdycji);
+
+            okno.Controls.Add(
+                grupaEdycji);
+
+            okno.Controls.Add(
                 btnPoprzedniDzien);
 
             okno.Controls.Add(
@@ -4476,10 +6291,11 @@ namespace GrafikBrygad
             DopasujOknoPomocniczeDoSkaliGlownego(
                 okno,
                 new Size(
-                    540,
-                    500));
+                    580,
+                    676));
 
-            okno.ShowDialog(this);
+            okno.ShowDialog(
+                this);
         }
 
 
@@ -4537,6 +6353,10 @@ namespace GrafikBrygad
                     // bardzo jasny kolor dnia wolnego.
                     return Color.WhiteSmoke;
 
+                case 'U':
+                    // Urlop — jasny fiolet / lawenda.
+                    return Color.Lavender;
+
                 default:
                     return Color.White;
             }
@@ -4566,6 +6386,9 @@ namespace GrafikBrygad
 
                 case 'X':
                     return "X – wolne";
+
+                case 'U':
+                    return "U – urlop";
 
                 default:
                     return zmiana.ToString();
@@ -4619,6 +6442,39 @@ namespace GrafikBrygad
                 'X' => "x – wolne",
                 _ => zmiana.ToString()
             };
+        }
+
+
+        // =====================================================
+        // KRÓTKA NAZWA BRYGADY W AKTUALNYM WIDOKU
+        // =====================================================
+        //
+        // Używana w kompaktowym oknie Szczegóły dnia.
+        //
+        // Widok Standardowy: A / B / C / D / E
+        // Widok Prosty:      I / II / III / IV / V
+
+        private string PobierzKrotkaNazweBrygadyWidoku(
+            int indeks)
+        {
+            if (!widokVeolia)
+            {
+                return
+                    ((char)('A' + indeks))
+                    .ToString();
+            }
+
+            string[] oznaczenia =
+            {
+                "I",
+                "II",
+                "III",
+                "IV",
+                "V"
+            };
+
+            return
+                oznaczenia[indeks];
         }
 
 
@@ -4853,6 +6709,856 @@ namespace GrafikBrygad
 
 
         // =====================================================
+        // USTAWIENIA UŻYTKOWNIKA - MOJA BRYGADA
+        // =====================================================
+
+        private string PobierzSciezkePlikuUstawien()
+        {
+            string katalog =
+                Path.Combine(
+                    Environment.GetFolderPath(
+                        Environment.SpecialFolder.LocalApplicationData),
+                    "GrafikBrygad");
+
+            return
+                Path.Combine(
+                    katalog,
+                    "ustawienia.json");
+        }
+
+
+        // =====================================================
+        // WCZYTANIE USTAWIENIA "MOJA BRYGADA"
+        // =====================================================
+
+        private void WczytajUstawieniaUzytkownika()
+        {
+            czyWybranoMojaBrygade =
+                false;
+
+            string sciezka =
+                PobierzSciezkePlikuUstawien();
+
+            if (!File.Exists(
+                sciezka))
+            {
+                return;
+            }
+
+            try
+            {
+                string json =
+                    File.ReadAllText(
+                        sciezka);
+
+                Dictionary<string, int>? dane =
+                    JsonSerializer.Deserialize<
+                        Dictionary<string, int>>(
+                            json);
+
+                if (dane == null ||
+                    !dane.TryGetValue(
+                        "MojaBrygada",
+                        out int indeks) ||
+                    indeks < 0 ||
+                    indeks >= brygady.Length)
+                {
+                    return;
+                }
+
+                mojaBrygada =
+                    indeks;
+
+                czyWybranoMojaBrygade =
+                    true;
+            }
+            catch (
+                Exception ex)
+            {
+                MessageBox.Show(
+                    "Nie udało się odczytać ustawienia „Moja brygada”.\n\n" +
+                    "Program poprosi o ponowny wybór brygady.\n\n" +
+                    ex.Message,
+                    "Grafik Brygad - ustawienia",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+        }
+
+
+        // =====================================================
+        // ZAPIS USTAWIENIA "MOJA BRYGADA"
+        // =====================================================
+
+        private bool ZapiszUstawieniaUzytkownika()
+        {
+            string sciezka =
+                PobierzSciezkePlikuUstawien();
+
+            string katalog =
+                Path.GetDirectoryName(
+                    sciezka) ??
+                "";
+
+            string plikTymczasowy =
+                sciezka +
+                ".tmp";
+
+            string kopiaBezpieczenstwa =
+                sciezka +
+                ".bak";
+
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(
+                    katalog))
+                {
+                    Directory.CreateDirectory(
+                        katalog);
+                }
+
+                Dictionary<string, int> dane =
+                    new Dictionary<string, int>
+                    {
+                        ["MojaBrygada"] =
+                            mojaBrygada
+                    };
+
+                JsonSerializerOptions opcje =
+                    new JsonSerializerOptions
+                    {
+                        WriteIndented = true
+                    };
+
+                string json =
+                    JsonSerializer.Serialize(
+                        dane,
+                        opcje);
+
+                File.WriteAllText(
+                    plikTymczasowy,
+                    json);
+
+                if (File.Exists(
+                    sciezka))
+                {
+                    File.Copy(
+                        sciezka,
+                        kopiaBezpieczenstwa,
+                        true);
+                }
+
+                File.Move(
+                    plikTymczasowy,
+                    sciezka,
+                    true);
+
+                czyWybranoMojaBrygade =
+                    true;
+
+                return true;
+            }
+            catch (
+                Exception ex)
+            {
+                try
+                {
+                    if (File.Exists(
+                        plikTymczasowy))
+                    {
+                        File.Delete(
+                            plikTymczasowy);
+                    }
+                }
+                catch
+                {
+                    // Zachowujemy pierwotny błąd.
+                }
+
+                MessageBox.Show(
+                    "Nie udało się zapisać ustawienia „Moja brygada”.\n\n" +
+                    ex.Message,
+                    "Grafik Brygad - ustawienia",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+
+                return false;
+            }
+        }
+
+
+        // =====================================================
+        // OKNO WYBORU "MOJA BRYGADA"
+        // =====================================================
+
+        private bool PokazWyborMojejBrygady(
+            IWin32Window wlasciciel,
+            bool wymagany)
+        {
+            using Form okno =
+                new Form();
+
+            okno.AutoScaleMode =
+                AutoScaleMode.None;
+
+            okno.Text =
+                wymagany
+                    ? "Wybierz swoją brygadę"
+                    : "Zmień swoją brygadę";
+
+            okno.StartPosition =
+                FormStartPosition.CenterParent;
+
+            okno.FormBorderStyle =
+                FormBorderStyle.FixedDialog;
+
+            okno.MaximizeBox =
+                false;
+
+            okno.MinimizeBox =
+                false;
+
+            okno.ShowInTaskbar =
+                false;
+
+            okno.ControlBox =
+                !wymagany;
+
+            okno.ClientSize =
+                new Size(
+                    560,
+                    270);
+
+            okno.BackColor =
+                Color.FromArgb(
+                    245,
+                    247,
+                    250);
+
+
+            Label lblTytul =
+                new Label();
+
+            lblTytul.Text =
+                "WYBIERZ SWOJĄ BRYGADĘ";
+
+            lblTytul.Location =
+                new Point(
+                    24,
+                    20);
+
+            lblTytul.Size =
+                new Size(
+                    512,
+                    38);
+
+            lblTytul.TextAlign =
+                ContentAlignment.MiddleCenter;
+
+            lblTytul.Font =
+                new Font(
+                    "Segoe UI",
+                    15F,
+                    FontStyle.Bold);
+
+
+            Label lblOpis =
+                new Label();
+
+            lblOpis.Location =
+                new Point(
+                    34,
+                    66);
+
+            lblOpis.Size =
+                new Size(
+                    492,
+                    52);
+
+            lblOpis.TextAlign =
+                ContentAlignment.MiddleCenter;
+
+            lblOpis.Font =
+                new Font(
+                    "Segoe UI",
+                    9.5F,
+                    FontStyle.Regular);
+
+            lblOpis.Text =
+                "Ta brygada będzie nadrzędna w programie. " +
+                "Tylko jej grafik będzie można ręcznie edytować. " +
+                "Pozostałe brygady nadal będą widoczne.";
+
+
+            string[] oznaczeniaProste =
+            {
+                "I",
+                "II",
+                "III",
+                "IV",
+                "V"
+            };
+
+            int nowaBrygada =
+                -1;
+
+            for (int i = 0;
+                 i < brygady.Length;
+                 i++)
+            {
+                int indeks =
+                    i;
+
+                Button btnBrygada =
+                    new Button();
+
+                btnBrygada.Text =
+                    ((char)('A' + i)).ToString() +
+                    " / " +
+                    oznaczeniaProste[i];
+
+                btnBrygada.Location =
+                    new Point(
+                        25 + i * 104,
+                        134);
+
+                btnBrygada.Size =
+                    new Size(
+                        94,
+                        48);
+
+                btnBrygada.Font =
+                    new Font(
+                        "Segoe UI",
+                        11F,
+                        FontStyle.Bold);
+
+                StylizujPrzycisk(
+                    btnBrygada,
+                    czyWybranoMojaBrygade &&
+                    i == mojaBrygada);
+
+                btnBrygada.Click +=
+                    (sender, e) =>
+                    {
+                        int poprzedniaBrygada =
+                            mojaBrygada;
+
+                        bool poprzednioWybrano =
+                            czyWybranoMojaBrygade;
+
+                        mojaBrygada =
+                            indeks;
+
+                        if (ZapiszUstawieniaUzytkownika())
+                        {
+                            nowaBrygada =
+                                indeks;
+
+                            okno.DialogResult =
+                                DialogResult.OK;
+
+                            okno.Close();
+                        }
+                        else
+                        {
+                            mojaBrygada =
+                                poprzedniaBrygada;
+
+                            czyWybranoMojaBrygade =
+                                poprzednioWybrano;
+                        }
+                    };
+
+                okno.Controls.Add(
+                    btnBrygada);
+            }
+
+
+            Label lblPodpowiedz =
+                new Label();
+
+            lblPodpowiedz.Location =
+                new Point(
+                    34,
+                    194);
+
+            lblPodpowiedz.Size =
+                new Size(
+                    492,
+                    28);
+
+            lblPodpowiedz.TextAlign =
+                ContentAlignment.MiddleCenter;
+
+            lblPodpowiedz.Font =
+                new Font(
+                    "Segoe UI",
+                    8.8F,
+                    FontStyle.Italic);
+
+            lblPodpowiedz.ForeColor =
+                Color.DimGray;
+
+            lblPodpowiedz.Text =
+                "A-E = Widok Standardowy   •   I-V = Widok Prosty";
+
+            okno.Controls.Add(
+                lblTytul);
+
+            okno.Controls.Add(
+                lblOpis);
+
+            okno.Controls.Add(
+                lblPodpowiedz);
+
+            DopasujOknoPomocniczeDoSkaliGlownego(
+                okno,
+                new Size(
+                    560,
+                    270));
+
+            DialogResult wynik =
+                okno.ShowDialog(
+                    wlasciciel);
+
+            return
+                wynik == DialogResult.OK &&
+                nowaBrygada >= 0;
+        }
+
+
+        // =====================================================
+        // RĘCZNE KOREKTY - PLIK LOKALNY
+        // =====================================================
+
+        private string PobierzSciezkePlikuKorekt()
+        {
+            string katalog =
+                Path.Combine(
+                    Environment.GetFolderPath(
+                        Environment.SpecialFolder.LocalApplicationData),
+                    "GrafikBrygad");
+
+            return
+                Path.Combine(
+                    katalog,
+                    "korekty.json");
+        }
+
+
+        // =====================================================
+        // KLUCZ RĘCZNEJ KOREKTY
+        // =====================================================
+
+        private string PobierzKluczKorekty(
+            DateTime data,
+            int indeksBrygady)
+        {
+            return
+                data.Date.ToString(
+                    "yyyyMMdd",
+                    CultureInfo.InvariantCulture) +
+                ":" +
+                indeksBrygady.ToString(
+                    CultureInfo.InvariantCulture);
+        }
+
+
+        // =====================================================
+        // CZY ISTNIEJE RĘCZNA KOREKTA
+        // =====================================================
+
+        private bool CzyRecznaKorekta(
+            DateTime data,
+            int indeksBrygady)
+        {
+            return
+                reczneKorekty.ContainsKey(
+                    PobierzKluczKorekty(
+                        data,
+                        indeksBrygady));
+        }
+
+
+        // =====================================================
+        // ZMIANA DO WYŚWIETLENIA
+        // =====================================================
+        //
+        // Metoda zwraca zmianę po uwzględnieniu zapisanej
+        // ręcznej korekty i jest wspólnym źródłem danych dla
+        // widoku grafiku, szczegółów dnia i wydruku.
+
+        private char PobierzZmianeDoWyswietlenia(
+            DateTime data,
+            int indeksBrygady)
+        {
+            string klucz =
+                PobierzKluczKorekty(
+                    data,
+                    indeksBrygady);
+
+            if (reczneKorekty.TryGetValue(
+                klucz,
+                out char korekta))
+            {
+                return korekta;
+            }
+
+            return
+                ObliczZmiane(
+                    data,
+                    datyStartowe[indeksBrygady]);
+        }
+
+
+        // =====================================================
+        // WCZYTANIE RĘCZNYCH KOREKT
+        // =====================================================
+
+        private void WczytajReczneKorekty()
+        {
+            reczneKorekty.Clear();
+
+            string sciezka =
+                PobierzSciezkePlikuKorekt();
+
+            if (!File.Exists(
+                sciezka))
+            {
+                return;
+            }
+
+            try
+            {
+                string json =
+                    File.ReadAllText(
+                        sciezka);
+
+                Dictionary<string, string>? dane =
+                    JsonSerializer.Deserialize<
+                        Dictionary<string, string>>(
+                            json);
+
+                if (dane == null)
+                {
+                    return;
+                }
+
+                foreach (
+                    KeyValuePair<string, string> wpis
+                    in dane)
+                {
+                    if (string.IsNullOrWhiteSpace(
+                        wpis.Key) ||
+                        string.IsNullOrWhiteSpace(
+                            wpis.Value) ||
+                        wpis.Value.Length != 1)
+                    {
+                        continue;
+                    }
+
+                    char zmiana =
+                        char.ToUpperInvariant(
+                            wpis.Value[0]);
+
+                    if (zmiana != 'R' &&
+                        zmiana != 'P' &&
+                        zmiana != 'N' &&
+                        zmiana != 'U')
+                    {
+                        continue;
+                    }
+
+                    string[] czesci =
+                        wpis.Key.Split(':');
+
+                    if (czesci.Length != 2)
+                    {
+                        continue;
+                    }
+
+                    if (!DateTime.TryParseExact(
+                        czesci[0],
+                        "yyyyMMdd",
+                        CultureInfo.InvariantCulture,
+                        DateTimeStyles.None,
+                        out DateTime data))
+                    {
+                        continue;
+                    }
+
+                    if (!int.TryParse(
+                        czesci[1],
+                        NumberStyles.Integer,
+                        CultureInfo.InvariantCulture,
+                        out int indeksBrygady) ||
+                        indeksBrygady < 0 ||
+                        indeksBrygady >= brygady.Length)
+                    {
+                        continue;
+                    }
+
+                    // Chroniony X nigdy nie może zostać
+                    // zastąpiony ręczną korektą.
+                    if (ObliczZmiane(
+                        data,
+                        datyStartowe[indeksBrygady]) == 'X')
+                    {
+                        continue;
+                    }
+
+                    reczneKorekty[
+                        PobierzKluczKorekty(
+                            data,
+                            indeksBrygady)] =
+                        zmiana;
+                }
+            }
+            catch (
+                Exception ex)
+            {
+                MessageBox.Show(
+                    "Nie udało się odczytać zapisanych ręcznych korekt.\n\n" +
+                    "Program uruchomi grafik bazowy bez tych zmian.\n\n" +
+                    ex.Message,
+                    "Grafik Brygad - korekty",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+            }
+        }
+
+
+        // =====================================================
+        // ZAPIS RĘCZNYCH KOREKT
+        // =====================================================
+
+        private bool ZapiszReczneKorekty()
+        {
+            string sciezka =
+                PobierzSciezkePlikuKorekt();
+
+            string katalog =
+                Path.GetDirectoryName(
+                    sciezka) ??
+                "";
+
+            string plikTymczasowy =
+                sciezka +
+                ".tmp";
+
+            string kopiaBezpieczenstwa =
+                sciezka +
+                ".bak";
+
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(
+                    katalog))
+                {
+                    Directory.CreateDirectory(
+                        katalog);
+                }
+
+                Dictionary<string, string> dane =
+                    new Dictionary<string, string>();
+
+                foreach (
+                    KeyValuePair<string, char> wpis
+                    in reczneKorekty)
+                {
+                    dane[wpis.Key] =
+                        wpis.Value.ToString();
+                }
+
+                JsonSerializerOptions opcje =
+                    new JsonSerializerOptions
+                    {
+                        WriteIndented = true
+                    };
+
+                string json =
+                    JsonSerializer.Serialize(
+                        dane,
+                        opcje);
+
+                File.WriteAllText(
+                    plikTymczasowy,
+                    json);
+
+                // Zachowujemy poprzednią wersję pliku jako .bak.
+                if (File.Exists(
+                    sciezka))
+                {
+                    File.Copy(
+                        sciezka,
+                        kopiaBezpieczenstwa,
+                        true);
+                }
+
+                // Podmiana dopiero po poprawnym zapisaniu
+                // całego pliku tymczasowego.
+                File.Move(
+                    plikTymczasowy,
+                    sciezka,
+                    true);
+
+                return true;
+            }
+            catch (
+                Exception ex)
+            {
+                try
+                {
+                    if (File.Exists(
+                        plikTymczasowy))
+                    {
+                        File.Delete(
+                            plikTymczasowy);
+                    }
+                }
+                catch
+                {
+                    // Nie przerywamy obsługi pierwotnego błędu.
+                }
+
+                MessageBox.Show(
+                    "Nie udało się zapisać ręcznej korekty.\n\n" +
+                    "Zmiana nie została utrwalona na dysku.\n\n" +
+                    ex.Message,
+                    "Grafik Brygad - zapis korekty",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+
+                return false;
+            }
+        }
+
+
+        // =====================================================
+        // USTAWIENIE RĘCZNEJ KOREKTY
+        // =====================================================
+
+        private bool UstawRecznaKorekte(
+            DateTime data,
+            int indeksBrygady,
+            char nowaZmiana)
+        {
+            // Druga warstwa ochrony: nawet gdyby metoda została
+            // wywołana z innego miejsca, korekta może dotyczyć
+            // wyłącznie własnej brygady użytkownika.
+            if (!czyWybranoMojaBrygade ||
+                indeksBrygady != mojaBrygada)
+            {
+                return false;
+            }
+
+            char bazowa =
+                ObliczZmiane(
+                    data,
+                    datyStartowe[indeksBrygady]);
+
+            // X pozostaje chronionym dniem wolnym.
+            if (bazowa == 'X')
+            {
+                return false;
+            }
+
+            string klucz =
+                PobierzKluczKorekty(
+                    data,
+                    indeksBrygady);
+
+            Dictionary<string, char> kopia =
+                new Dictionary<string, char>(
+                    reczneKorekty);
+
+            // Wybranie wartości identycznej z bazową jest
+            // równoważne AUTO - nie przechowujemy zbędnego wpisu.
+            if (nowaZmiana == bazowa)
+            {
+                reczneKorekty.Remove(
+                    klucz);
+            }
+            else
+            {
+                reczneKorekty[klucz] =
+                    nowaZmiana;
+            }
+
+            if (ZapiszReczneKorekty())
+            {
+                return true;
+            }
+
+            // Jeśli zapis się nie udał, wracamy do poprzedniego
+            // stanu pamięci, aby ekran i plik były zgodne.
+            reczneKorekty.Clear();
+
+            foreach (
+                KeyValuePair<string, char> wpis
+                in kopia)
+            {
+                reczneKorekty[wpis.Key] =
+                    wpis.Value;
+            }
+
+            return false;
+        }
+
+
+        // =====================================================
+        // USUNIĘCIE RĘCZNEJ KOREKTY - AUTO
+        // =====================================================
+
+        private bool UsunRecznaKorekte(
+            DateTime data,
+            int indeksBrygady)
+        {
+            if (!czyWybranoMojaBrygade ||
+                indeksBrygady != mojaBrygada)
+            {
+                return false;
+            }
+
+            string klucz =
+                PobierzKluczKorekty(
+                    data,
+                    indeksBrygady);
+
+            if (!reczneKorekty.ContainsKey(
+                klucz))
+            {
+                return true;
+            }
+
+            Dictionary<string, char> kopia =
+                new Dictionary<string, char>(
+                    reczneKorekty);
+
+            reczneKorekty.Remove(
+                klucz);
+
+            if (ZapiszReczneKorekty())
+            {
+                return true;
+            }
+
+            reczneKorekty.Clear();
+
+            foreach (
+                KeyValuePair<string, char> wpis
+                in kopia)
+            {
+                reczneKorekty[wpis.Key] =
+                    wpis.Value;
+            }
+
+            return false;
+        }
+
+
+        // =====================================================
         // OBLICZANIE ZMIANY
         // =====================================================
 
@@ -5047,6 +7753,31 @@ namespace GrafikBrygad
                         continue;
                     }
 
+                    // Urlop ma własny kolor również w Widoku Prostym.
+                    if (zmiana == 'U')
+                    {
+                        komorka.Style.BackColor =
+                            Color.Lavender;
+
+                        komorka.Style.ForeColor =
+                            Color.Black;
+
+                        komorka.Style.SelectionBackColor =
+                            Color.Lavender;
+
+                        komorka.Style.SelectionForeColor =
+                            Color.Black;
+
+                        komorka.Style.Font =
+                            new Font(
+                                "Segoe UI",
+                                13.5f,
+                                FontStyle.Bold |
+                                FontStyle.Underline);
+
+                        continue;
+                    }
+
                     if (widokVeolia)
                     {
                         // Widok VEOLIA przypomina papierowy grafik:
@@ -5069,6 +7800,27 @@ namespace GrafikBrygad
                         komorka.Style.SelectionForeColor =
                             Color.Black;
 
+                        if (CzyRecznaKorekta(
+                            data,
+                            indeksBrygady))
+                        {
+                            komorka.Style.Font =
+                                new Font(
+                                    "Segoe UI",
+                                    13.5f,
+                                    FontStyle.Bold |
+                                    FontStyle.Underline);
+                        }
+                        else if (czyWybranoMojaBrygade &&
+                            indeksBrygady == mojaBrygada)
+                        {
+                            komorka.Style.Font =
+                                new Font(
+                                    "Segoe UI",
+                                    13.5f,
+                                    FontStyle.Bold);
+                        }
+
                         continue;
                     }
 
@@ -5087,6 +7839,27 @@ namespace GrafikBrygad
 
                     komorka.Style.SelectionForeColor =
                         komorka.Style.ForeColor;
+
+                    if (CzyRecznaKorekta(
+                        data,
+                        indeksBrygady))
+                    {
+                        komorka.Style.Font =
+                            new Font(
+                                "Segoe UI",
+                                13.5f,
+                                FontStyle.Bold |
+                                FontStyle.Underline);
+                    }
+                    else if (czyWybranoMojaBrygade &&
+                        indeksBrygady == mojaBrygada)
+                    {
+                        komorka.Style.Font =
+                            new Font(
+                                "Segoe UI",
+                                13.5f,
+                                FontStyle.Bold);
+                    }
                 }
             }
         }
@@ -5411,6 +8184,13 @@ namespace GrafikBrygad
                     6.2F,
                     FontStyle.Regular);
 
+            using Font fontKorekta =
+                new Font(
+                    "Segoe UI",
+                    6.2F,
+                    FontStyle.Bold |
+                    FontStyle.Underline);
+
             using Font fontDzien =
                 new Font(
                     "Segoe UI",
@@ -5519,7 +8299,7 @@ namespace GrafikBrygad
                 17.0F;
 
             const float wysokoscPodsumowania =
-                67.0F;
+                82.0F;
 
             const float odstepPrzedPodsumowaniem =
                 5.0F;
@@ -5590,6 +8370,7 @@ namespace GrafikBrygad
                     fontMiesiac,
                     fontNaglowek,
                     fontKomorka,
+                    fontKorekta,
                     fontDzien,
                     sfSrodek);
             }
@@ -5634,11 +8415,7 @@ namespace GrafikBrygad
                     wysokoscStopki);
 
             string stopka =
-                NazwaProgramu +
-                " • " +
-                WersjaProgramu +
-                " • Autor: " +
-                AutorProgramu;
+                NotaPrawna;
 
             g.DrawString(
                 stopka,
@@ -5669,6 +8446,7 @@ namespace GrafikBrygad
             Font fontMiesiac,
             Font fontNaglowek,
             Font fontKomorka,
+            Font fontKorekta,
             Font fontDzien,
             StringFormat sfSrodek)
         {
@@ -5785,8 +8563,14 @@ namespace GrafikBrygad
                         szerokoscBrygady,
                         wysokoscNaglowka);
 
+                Brush tloNaglowkaBrygady =
+                    czyWybranoMojaBrygade &&
+                    b == mojaBrygada
+                        ? Brushes.Khaki
+                        : Brushes.WhiteSmoke;
+
                 g.FillRectangle(
-                    Brushes.WhiteSmoke,
+                    tloNaglowkaBrygady,
                     rectNaglowek);
 
                 g.DrawRectangle(
@@ -5801,7 +8585,11 @@ namespace GrafikBrygad
                         b)
                     .Replace(
                         "Brygada ",
-                        "");
+                        "") +
+                    (czyWybranoMojaBrygade &&
+                     b == mojaBrygada
+                        ? " ★"
+                        : "");
 
                 g.DrawString(
                     nazwaBrygady,
@@ -5944,22 +8732,34 @@ namespace GrafikBrygad
                     if (istniejeDzien)
                     {
                         char zmiana =
-                            ObliczZmiane(
+                            PobierzZmianeDoWyswietlenia(
                                 data,
-                                datyStartowe[b]);
+                                b);
+
+                        bool recznaKorekta =
+                            CzyRecznaKorekta(
+                                data,
+                                b);
 
                         symbol =
                             PobierzSymbolWidoku(
                                 zmiana);
 
-                        if (widokVeolia)
+                        // Urlop ma własny kolor w obu widokach.
+                        if (zmiana == 'U')
+                        {
+                            tloZmiany =
+                                Brushes.Lavender;
+                        }
+                        else if (widokVeolia)
                         {
                             // Widok Prosty jest oszczędny:
                             // zwykłe komórki pozostają białe.
                             // Khaki wskazuje korektę wolnej niedzieli.
-                            if (CzyKorektaWolnejNiedzieli(
-                                data,
-                                datyStartowe[b]))
+                            if (!recznaKorekta &&
+                                CzyKorektaWolnejNiedzieli(
+                                    data,
+                                    datyStartowe[b]))
                             {
                                 tloZmiany =
                                     Brushes.Khaki;
@@ -6020,9 +8820,16 @@ namespace GrafikBrygad
 
                     if (istniejeDzien)
                     {
+                        Font fontDoKomorki =
+                            CzyRecznaKorekta(
+                                data,
+                                b)
+                                ? fontKorekta
+                                : fontKomorka;
+
                         g.DrawString(
                             symbol,
-                            fontKomorka,
+                            fontDoKomorki,
                             tekstZmiany,
                             rectZmiana,
                             sfSrodek);
@@ -6060,6 +8867,9 @@ namespace GrafikBrygad
             int[] dniDoDopracowania =
                 new int[brygady.Length];
 
+            int[] dniDoDopracowaniaPoKorekcie =
+                new int[brygady.Length];
+
             for (int i = 0;
                  i < brygady.Length;
                  i++)
@@ -6073,11 +8883,23 @@ namespace GrafikBrygad
                 dniDoDopracowania[i] =
                     wymiar -
                     dniPracy[i];
+
+                int dniZaliczonePoKorekcie =
+                    ObliczDniZaliczonePoKorektach(
+                        i,
+                        poczatek,
+                        koniec);
+
+                dniDoDopracowaniaPoKorekcie[i] =
+                    Math.Max(
+                        0,
+                        wymiar -
+                        dniZaliczonePoKorekcie);
             }
 
 
             const int liczbaWierszy =
-                4;
+                5;
 
             float wysokoscWiersza =
                 wysokosc /
@@ -6101,6 +8923,7 @@ namespace GrafikBrygad
                 "Liczba dni roboczych w okresie rozliczeniowym (wymiar czasu pracy)",
                 "Liczba dni roboczych w harmonogramie dla poszczególnych brygad",
                 "Liczba dni do dopracowania do pełnego wymiaru czasu pracy",
+                "Liczba dni do dopracowania po uwzględnieniu ręcznych zmian i urlopu",
                 "Okres rozliczeniowy"
             };
 
@@ -6121,10 +8944,15 @@ namespace GrafikBrygad
                         szerokoscOpisu,
                         wysokoscWiersza);
 
-                g.FillRectangle(
-                    wiersz == 3
+                Brush tloOpisu =
+                    wiersz == 4
                         ? Brushes.Gainsboro
-                        : Brushes.White,
+                        : wiersz == 3
+                            ? Brushes.AliceBlue
+                            : Brushes.White;
+
+                g.FillRectangle(
+                    tloOpisu,
                     rectOpis);
 
                 g.DrawRectangle(
@@ -6143,7 +8971,7 @@ namespace GrafikBrygad
 
                 g.DrawString(
                     opisy[wiersz],
-                    wiersz == 3
+                    wiersz == 4
                         ? fontWartosc
                         : fontOpis,
                     Brushes.Black,
@@ -6184,10 +9012,10 @@ namespace GrafikBrygad
 
 
                 // ---------------------------------------------
-                // WIERSZ 4 - nazwa okresu
+                // WIERSZ 5 - nazwa okresu
                 // ---------------------------------------------
 
-                if (wiersz == 3)
+                if (wiersz == 4)
                 {
                     RectangleF rectOkres =
                         new RectangleF(
@@ -6221,7 +9049,7 @@ namespace GrafikBrygad
 
 
                 // ---------------------------------------------
-                // WIERSZE 2-3 - wartości dla pięciu brygad
+                // WIERSZE 2-4 - wartości dla pięciu brygad
                 // ---------------------------------------------
 
                 for (int i = 0;
@@ -6238,6 +9066,16 @@ namespace GrafikBrygad
                             szerokoscPolaBrygady,
                             wysokoscWiersza);
 
+                    if (wiersz == 3)
+                    {
+                        g.FillRectangle(
+                            czyWybranoMojaBrygade &&
+                            i == mojaBrygada
+                                ? Brushes.LightSkyBlue
+                                : Brushes.AliceBlue,
+                            rectWartosc);
+                    }
+
                     g.DrawRectangle(
                         Pens.Black,
                         rectWartosc.X,
@@ -6248,7 +9086,9 @@ namespace GrafikBrygad
                     int wartosc =
                         wiersz == 1
                             ? dniPracy[i]
-                            : dniDoDopracowania[i];
+                            : wiersz == 2
+                                ? dniDoDopracowania[i]
+                                : dniDoDopracowaniaPoKorekcie[i];
 
                     g.DrawString(
                         wartosc.ToString(),

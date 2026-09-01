@@ -1,146 +1,169 @@
 # Grafik Brygad VEOLIA Energia Łódź
 
-Aplikacja Windows Forms w języku C# do prezentowania cyklicznego grafiku pracy pięciu brygad A–E.
+**Aktualna wersja: 1.22**
 
-**Aktualna stabilna wersja: v1.21**
+Windowsowa aplikacja w C# / Windows Forms do prezentacji cyklicznego
+grafiku pięciu brygad zmianowych, obsługi własnej brygady, ręcznych
+korekt grafiku, kwartalnych okresów rozliczeniowych oraz wydruku A4.
+
+> © 2026 MAREK WALASZCZYK. Wszelkie prawa zastrzeżone.\
+> Program jest darmowy, ale zabrania się modyfikacji kodu oraz
+> rozpowszechniania go bez zgody autora.
 
 ## Najważniejsze funkcje
 
-- automatyczny grafik pięciu brygad,
-- 20-dniowy cykl `NNNNXPPPPXRRRRWWWWWW`,
-- **Widok Standardowy** R / P / N / W / X,
-- **Widok Prosty** I–V oraz 1 / 2 / 3 / w / x,
-- jaśniejsze pola W/X w Widoku Standardowym,
-- niedzielne korekty zmiany R,
-- obsługa świąt i Dnia Energetyka 14 sierpnia,
-- specjalna prezentacja pracy P/N 31 grudnia,
-- nawigacja po miesiącach i latach,
-- kliknięcie dnia lub dnia tygodnia otwiera **Szczegóły dnia**,
-- kliknięcie nagłówka brygady otwiera **Kwartalny okres rozliczeniowy**,
-- kwartalne i roczne obliczenia dni do dopracowania,
-- przycisk **INFO** z krótką instrukcją obsługi,
-- podgląd wydruku o stałym, bezpiecznym rozmiarze,
-- **wydruk całego kwartału na jednej stronie A4 w orientacji poziomej**,
-- skalowanie interfejsu PerMonitorV2,
-- instalator Windows x64,
-- krótka nazwa skrótu na pulpicie: **Grafik Brygad**.
+-   automatyczne wyliczanie grafiku pięciu brygad w cyklu 20-dniowym,
+-   dwa sposoby prezentacji: **Widok standardowy** oraz **Widok
+    prosty**,
+-   szybka nawigacja: poprzedni/następny miesiąc, aktualny miesiąc oraz
+    rok -1 / +1,
+-   oznaczenie sobót, niedziel i świąt,
+-   okno **Szczegóły dnia** otwierane kliknięciem dowolnego pola danego
+    dnia,
+-   wybór **Mojej brygady** jako brygady nadrzędnej użytkownika,
+-   ręczna korekta własnego grafiku: **R / P / N / U** oraz powrót do
+    harmonogramu przez **AUTO**,
+-   trwały lokalny zapis ręcznych korekt,
+-   okno **Moje zmiany** z listą wszystkich aktywnych korekt,
+-   filtry zmian: **Wszystkie / Bieżący rok / Bieżący kwartał**,
+-   bezpośrednie przejście z listy zmian do wybranego dnia,
+-   kwartalny okres rozliczeniowy z uwzględnieniem ręcznych zmian i
+    urlopu,
+-   kwartalny podgląd wydruku i wydruk A4,
+-   wyróżnienie Mojej brygady również w podsumowaniach i na wydruku.
 
-## Widoki programu
+## Oznaczenia zmian
 
-### Widok Standardowy
+  Symbol     Znaczenie
+  ---------- ------------------------------------------------
+  **R**      zmiana rano
+  **P**      zmiana popołudniowa
+  **N**      zmiana nocna
+  **W**      dzień wolny
+  **X**      chroniony dzień wolny wynikający z cyklu
+  **U**      urlop
+  **AUTO**   usuwa ręczną korektę i przywraca grafik bazowy
 
-Kolorowy widok wykorzystujący symbole:
+W **Widoku prostym** zmiany są przedstawiane jako `1 – rano`,
+`2 – popołudnie`, `3 – noc`, natomiast dni wolne pozostają oznaczone
+jako `W/X`.
 
-- `N` – noc,
-- `P` – popołudnie,
-- `R` – rano,
-- `W/X` – dni wolne.
+## Widok standardowy
 
-Pola W/X są celowo bardzo jasne, aby zmiany robocze były lepiej widoczne.
+Kolorowy widok pokazuje bezpośrednio oznaczenia **R / P / N / W / X /
+U** dla wszystkich pięciu brygad. Moja brygada jest wyróżniona w
+nagłówku.
 
-![Widok Standardowy v1.21](Images/v1.21-standard.png)
+![Widok standardowy v1.22](Images/v1.22-standard.png)
 
-### Widok Prosty
+## Widok prosty
 
-Widok zbliżony do papierowego grafiku VEOLIA. Kolumny brygad są oznaczone I–V, a zmiany symbolami `1 / 2 / 3 / w / x`.
+Alternatywny widok wykorzystuje oznaczenia **1 / 2 / 3 / W / X / U** i
+zachowuje wszystkie funkcje nawigacji oraz edycji.
 
-![Widok Prosty v1.21](Images/v1.21-prosty.png)
+![Widok prosty v1.22](Images/v1.22-prosty.png)
 
-## Szczegóły dnia
+## Szczegóły dnia i ręczna edycja
 
-Kliknięcie numeru dnia albo skrótu dnia tygodnia otwiera okno **Szczegóły dnia**. Okno pokazuje datę, ewentualne święto lub Dzień Energetyka oraz zmianę każdej brygady.
+Kliknięcie dowolnej komórki w wierszu dnia otwiera okno **Szczegóły
+dnia**. Pokazywane są zmiany wszystkich brygad, natomiast edycja dotyczy
+wyłącznie ustawionej **Mojej brygady**.
 
-![Szczegóły dnia v1.21](Images/v1.21-szczegoly-dnia.png)
+Dostępne korekty:
+
+-   **R** -- rano,
+-   **P** -- popołudnie,
+-   **N** -- noc,
+-   **U** -- urlop,
+-   **AUTO** -- przywrócenie grafiku bazowego.
+
+Korekty są zapisywane lokalnie i pozostają aktywne po ponownym
+uruchomieniu programu.
+
+![Szczegóły dnia v1.22](Images/v1.22-szczegoly-dnia.png)
+
+## Moje zmiany
+
+Okno **Moje zmiany** umożliwia szybkie odnalezienie wszystkich wcześniej
+wprowadzonych ręcznych korekt bez przeglądania grafiku miesiąc po
+miesiącu.
+
+Lista pokazuje:
+
+-   datę,
+-   dzień tygodnia,
+-   grafik bazowy,
+-   wprowadzoną zmianę.
+
+Wpisy są zawsze uporządkowane chronologicznie. Sortowanie nagłówkami
+kolumn jest wyłączone. Dostępne są filtry **Wszystkie**, **Bieżący rok**
+i **Bieżący kwartał**.
+
+Dwuklik na wpisie lub przycisk **POKAŻ DZIEŃ** przenosi bezpośrednio do
+odpowiedniego okna **Szczegóły dnia**.
+
+![Moje zmiany v1.22](Images/v1.22-moje-zmiany.png)
 
 ## Kwartalny okres rozliczeniowy
 
-Kliknięcie nagłówka wybranej brygady otwiera kwartalne okno okresu rozliczeniowego. Program pokazuje:
+Okno okresu rozliczeniowego pokazuje wymiar czasu pracy oraz wartości
+dla wszystkich brygad. Moja brygada jest oznaczona symbolem `★`.
 
-- liczbę dni roboczych w okresie rozliczeniowym (wymiar czasu pracy),
-- liczbę dni roboczych w harmonogramie poszczególnych brygad,
-- liczbę dni do dopracowania do pełnego wymiaru czasu pracy w kwartale,
-- liczbę dni do dopracowania do pełnego wymiaru czasu pracy w roku kalendarzowym.
+Podsumowanie zawiera:
 
-Wybrana brygada jest dodatkowo wyróżniona w tabeli.
+1.  liczbę dni roboczych w harmonogramie dla poszczególnych brygad,
+2.  liczbę dni do dopracowania do pełnego wymiaru czasu pracy,
+3.  liczbę dni do dopracowania po uwzględnieniu ręcznych zmian i urlopu,
+4.  liczbę dni do dopracowania do pełnego wymiaru czasu pracy w ciągu
+    roku kalendarzowego.
 
-![Kwartalny okres rozliczeniowy v1.21](Images/v1.21-okres-rozliczeniowy.png)
+Ręczne zmiany **R / P / N / U** są uwzględniane w wierszu korekty. `W` i
+`X` nie zwiększają liczby dni zaliczonych do wymiaru.
 
-## Wydruk kwartalny
+![Okres rozliczeniowy v1.22](Images/v1.22-okres-rozliczeniowy.png)
 
-Przyciski **PODGLĄD WYDRUKU** i **DRUKUJ A4** przygotowują cały aktualny kwartał na jednej stronie A4 w orientacji poziomej.
+## Wydruk kwartalny A4
 
-Na wydruku znajdują się trzy miesiące ustawione obok siebie oraz podsumowanie okresu rozliczeniowego:
+Podgląd wydruku i **DRUKUJ A4** generują cały kwartał na jednej stronie
+w układzie poziomym. Wydruk zawiera trzy miesiące, wyróżnienie Mojej
+brygady, ręczne korekty oraz podsumowanie okresu rozliczeniowego.
 
-- wymiar czasu pracy,
-- liczba dni pracy poszczególnych brygad,
-- liczba dni do dopracowania,
-- nazwa okresu rozliczeniowego.
-
-Wydruk respektuje aktualnie wybrany Widok Standardowy lub Widok Prosty.
+![Wydruk kwartalny v1.22](Images/v1.22-wydruk-kwartalny.png)
 
 ## Instalacja
 
-Zalecana paczka instalacyjna:
+Do instalacji przeznaczony jest pakiet wydania
+**GrafikBrygad-v1.22-Setup**.
 
-`GrafikBrygad-v1.21-Setup.zip`
+Po instalacji aplikacja może być uruchamiana ze skrótu **Grafik
+Brygad**. Przy pierwszym uruchomieniu użytkownik wybiera swoją brygadę,
+która staje się **Moją brygadą**.
 
-Po uruchomieniu instalatora v1.21 istniejąca instalacja poprzedniej wersji zostanie zaktualizowana dzięki zachowaniu tego samego `AppId`.
+## Wymagania
 
-Skrót tworzony na pulpicie ma nazwę:
+-   Windows 64-bit,
+-   aplikacja publikowana jako samodzielna dla `win-x64`,
+-   projekt: C# / Windows Forms / .NET 10.
 
-`Grafik Brygad`
+## Aktualizacje
 
-## Wymagania projektu
-
-- Windows,
-- Visual Studio z obsługą aplikacji klasycznych .NET,
-- .NET 10,
-- Windows Forms,
-- konfiguracja docelowa `net10.0-windows`.
-
-Projekt korzysta z plików:
-
-- `Images/veolia.png`
-- `Images/GrafikBrygad.ico`
-
-## Publikacja
-
-Zalecane ustawienia publikacji:
-
-- konfiguracja: **Release**,
-- środowisko docelowe: **win-x64**,
-- tryb: **Self-contained**.
-
-Pliki publikacji powinny znaleźć się w:
-
-`publish/win-x64`
-
-Następnie należy skompilować skrypt Inno Setup:
-
-`Installer/GrafikBrygad-v1.21.iss`
-
-Wynik:
-
-`GrafikBrygad-v1.21-Setup.exe`
-
-Do GitHub Release zalecane jest spakowanie instalatora jako:
-
-`GrafikBrygad-v1.21-Setup.zip`
-
-## Co nowego w v1.21
-
-W porównaniu z v1.20 dodano i poprawiono między innymi:
-
-- zmianę nazwy przycisku z „WIDOK VEOLIA” na **„WIDOK PROSTY”**,
-- nowe okno **INFO** z instrukcją użytkowania,
-- skróconą nazwę ikony instalowanej na pulpicie do **„Grafik Brygad”**,
-- całkowicie nowy, ekonomiczny **wydruk kwartalny A4**,
-- stabilny rozmiar i pozycję okna Podglądu wydruku,
-- dopracowanie tekstów i czcionek w oknie okresu rozliczeniowego,
-- jaśniejsze pola W/X w Widoku Standardowym, szczegółach dnia i wydruku.
+W dolnej części głównego okna znajduje się odsyłacz **Pobierz najnowszą
+wersję**, prowadzący do repozytorium projektu i kolejnych wydań.
 
 ## Autor
 
-Marek Walaszczyk
+**Marek Walaszczyk**\
+Projekt rozwijany od 2026 roku.
 
-Projekt rozpoczęty: **2026.08**
+## Licencja
+
+Program jest udostępniany bezpłatnie, ale **nie jest projektem
+open-source**.
+
+Copyright © 2026 Marek Walaszczyk. Wszelkie prawa zastrzeżone.
+
+Bez zgody autora zabrania się między innymi modyfikowania kodu,
+publikowania zmienionych wersji, przypisywania sobie autorstwa oraz
+rozpowszechniania programu lub kodu źródłowego.
+
+Pełne warunki znajdują się w pliku **[LICENSE.txt](LICENSE.txt)**.
